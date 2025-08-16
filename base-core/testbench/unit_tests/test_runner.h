@@ -4,12 +4,13 @@
 #include <verilated_fst_sc.h>
 #include <memory>
 #include <iostream>
-#include "Vtop.h"
+
 #include <functional>
 
 
 using namespace sc_core;
 using namespace sc_dt;
+
 
 class TestRunner{
 private:
@@ -33,14 +34,20 @@ public:
 
     static TestRunner& getInstance();
 
+    template<typename T>
     bool runTest(
         std::string module_name,
         std::string test_name,
         std::function<void(
-            Vtop*,
+            T*,
             std::function<bool(
                 bool,
                 bool,
+                std::string
+            )>,
+            std::function<bool(
+                unsigned int,
+                unsigned int,
                 std::string
             )>,
             std::string&,
@@ -61,7 +68,7 @@ public:
         Verilated::randReset(2); 		//Reset randomization policy
         Verilated::commandArgs(argc, argv); 	//Passing command args (required)
 
-        Vtop* module = new Vtop{module_name.c_str()};
+        T* module = new T{module_name.c_str()};
 
         bool test_passed = true;
 
@@ -71,6 +78,21 @@ public:
             [&test_passed](
                 bool expected,
                 bool actual,
+                std::string assertion_name
+            )
+            {
+                if(expected!=actual)
+                {
+                    test_passed = false;
+                    std::cout<<"Assertion failed: "<<assertion_name<<std::endl;
+                    std::cout<<"Expected: "<<expected<<", got: "<<actual<<std::endl;
+                    return false;
+                }
+                return true;
+            },
+            [&test_passed](
+                unsigned int expected,
+                unsigned int actual,
                 std::string assertion_name
             )
             {
@@ -127,6 +149,10 @@ TestRunner& TestRunner::getInstance()
     sc_signal<bool> port_name;  \
     module->port_name(port_name);
 
+#define SET_SIGNAL_VECTOR(port_name) \
+    sc_signal<unsigned int> port_name;  \
+    module->port_name(port_name);
+
 #define START_SIMULATION \
     sc_start(SC_ZERO_TIME); \
     auto tfp = new VerilatedFstSc;  \
@@ -139,16 +165,21 @@ TestRunner& TestRunner::getInstance()
     tfp->open(file_name.c_str());
 
 #define TEST(module_name_, test_name_) \
-    runner.runTest( \
+    runner.runTest<V##module_name_>( \
         #module_name_,  \
         #test_name_,  \
         []( \
-            Vtop* module, \
+            V##module_name_* module, \
             std::function<bool( \
                 bool, \
                 bool, \
                 std::string \
             )> assert_signal, \
+            std::function<bool( \
+                unsigned int, \
+                unsigned int, \
+                std::string \
+            )> assert_signal_vector, \
             std::string& module_name, \
             std::string& test_name  \
         ){
