@@ -1,36 +1,8 @@
-#include "test_runner.h"
+
+#include "Vflip_flop.h"
+#include "../test_runner.h"
 
 TESTS;
-
-    TEST(top, test)
-        SET_CLOCK(clk, 10, 3);
-        SET_SIGNAL(reset);
-        SET_SIGNAL(D);
-        SET_SIGNAL(Q);
-    START_SIMULATION;
-        D = false;
-        reset = false;
-        STEP(10)
-        reset = true;
-        STEP(1)
-        reset = false;
-        STEP(10)
-        assert_signal(false, Q, "reset");
-        D = true;
-        for(int i = 0; i<5;i++)
-        {
-            STEP(1)
-            if(clk == false)
-            {
-                assert_signal(false, Q, "bef edge");
-            }
-            else
-            {
-                assert_signal(true, Q, "after edge");
-            }
-        }
-    END_SIMULATION;
-
 
     TEST(flip_flop, test_manual_clock)
         SET_SIGNAL(clk)
