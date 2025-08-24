@@ -12,6 +12,7 @@
   - ```traces_<module_name>_<test_name>.fst``` - Trace file from last execution of a specific test case.
 - ```obj_dir/``` - Directory for temporary build files.
 - ```design/``` - Directory for Verilog design files of the core itself.
+  - ```basic_synchronized_ram.v``` - An implementation of 'data_memory' module (the MCU will be written in a way, that allows for easy swapping of memory implementations).
   - ```flip_flop.v``` - A simple D flip-flop design, used to test the testbench.
   - ```alu.v``` - Design form the ALU.
 - ```unit_tests.sh``` - A bash script for building and running tests for Verilog modules.
