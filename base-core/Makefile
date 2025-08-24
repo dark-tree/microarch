@@ -1,7 +1,8 @@
 
 VERILOG_DESIGN_FILES = \
 	design/flip_flop.v	\
-	design/alu.v
+	design/alu.v				\
+	design/register_bank.v
 
 default: run
 
