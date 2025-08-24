@@ -13,7 +13,8 @@
 - ```obj_dir/``` - Directory for temporary build files.
 - ```design/``` - Directory for Verilog design files of the core itself.
   - ```flip_flop.v``` - A simple D flip-flop design, used to test the testbench.
-  - ```alu.v``` - Design form the ALU.
+  - ```alu.v``` - Design for the ALU.
+  - ```register_bank.v``` - Design for a general purpose register bank.
 - ```unit_tests.sh``` - A bash script for building and running tests for Verilog modules.
 - ```testbench/``` - SystemC testbench for testing the core.
   - ```sc_main.cpp``` - Main testbench simulation - for ad-hoc development and testing of modules.
