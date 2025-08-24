@@ -1,5 +1,6 @@
 
 VERILOG_DESIGN_FILES = \
+	design/mmu.v				\
 	design/flip_flop.v	\
 	design/alu.v
 
