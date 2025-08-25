@@ -12,11 +12,12 @@
   - ```traces_<module_name>_<test_name>.fst``` - Trace file from last execution of a specific test case.
 - ```obj_dir/``` - Directory for temporary build files.
 - ```design/``` - Directory for Verilog design files of the core itself.
-  - ```basic_synchronized_ram.v``` - An implementation of 'data_memory' module (the MCU will be written in a way, that allows for easy swapping of memory implementations).
-  - ```flip_flop.v``` - A simple D flip-flop design, used to test the testbench.
-  - ```alu.v``` - Design for the ALU.
-  - ```register_bank.v``` - Design for a general purpose register bank.
-  - ```mmu.v``` - Design file for the Memory Management Unit.
+  - ```data_memory/``` - A directory for data memory modules, that can be used by the design (modules can be swapped by changing value of the ```DATA_MEMORY_SELECTED``` variable in ```Makefile```).
+    - ```basic_synchronized_ram.v``` - An implementation of 'data_memory' module (the MCU will be written in a way, that allows for easy swapping of memory implementations).
+  - ```core/``` - Design files for the CPU core (microarch base-core) itself.
+    - ```alu.v``` - Design file for the ALU.
+    - ```register_bank.v``` - Design for a general purpose register bank.
+    - ```mmu.v``` - Design file for the Memory Management Unit.
 - ```unit_tests.sh``` - A bash script for building and running tests for Verilog modules.
 - ```testbench/``` - SystemC testbench for testing the core.
   - ```sc_main.cpp``` - Main testbench simulation - for ad-hoc development and testing of modules.
