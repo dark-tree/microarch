@@ -38,4 +38,4 @@ verilate_main:
 	@echo "-- Verilating microarch BaseCore design simulation --"
 	@echo "Generating object files..."
 	@echo "Generating Makefile..."
-	verilator -sc -exe -Wall --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) --top alu testbench/sc_main.cpp
+	verilator -sc -exe --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) --top alu testbench/sc_main.cpp
