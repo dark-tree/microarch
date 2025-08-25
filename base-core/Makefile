@@ -2,7 +2,8 @@
 VERILOG_DESIGN_FILES = \
 	design/mmu.v				\
 	design/flip_flop.v	\
-	design/alu.v
+	design/alu.v				\
+	design/register_bank.v
 
 DATA_MEMORY_SELECTED = design/basic_synchronized_ram.v
 
