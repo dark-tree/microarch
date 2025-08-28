@@ -1,11 +1,10 @@
 
-VERILOG_DESIGN_FILES = \
-	design/mmu.v				\
-	design/flip_flop.v	\
-	design/alu.v				\
-	design/register_bank.v
+VERILOG_DESIGN_FILES = 				\
+	design/core/mmu.v						\
+	design/core/alu.v						\
+	design/core/register_bank.v
 
-DATA_MEMORY_SELECTED = design/basic_synchronized_ram.v
+DATA_MEMORY_SELECTED = design/data_memory/basic_synchronized_ram.v
 
 default: run
 
@@ -39,4 +38,4 @@ verilate_main:
 	@echo "-- Verilating microarch BaseCore design simulation --"
 	@echo "Generating object files..."
 	@echo "Generating Makefile..."
-	verilator -sc -exe -Wall --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) --top alu testbench/sc_main.cpp
+	verilator -sc -exe --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) --top alu testbench/sc_main.cpp
