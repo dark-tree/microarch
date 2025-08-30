@@ -7,6 +7,8 @@ module id_stage_1
     output alu_write_signal,
     output[7:0] regmask_a,
     output[7:0] regmask_b,
+    output[7:0] alu_immediate,
+    output[7:0] registers_used,
     input[7:0] register_bus_a,
     input[7:0] register_bus_b,
     output[7:0] ctr_value,
@@ -26,6 +28,7 @@ module id_stage_1
 
   assign regmask_a = instruction[15:8];
   assign regmask_b = instruction[7:0];
+  assign alu_immediate = instruction[7:0];
 
   assign ctr_value = instruction[15:8];
 
@@ -66,4 +69,18 @@ module id_stage_1
   assign next_instruction_address = (interrupt_signal == 1'b1) ? 16'b0000000000000000 : next_address_staging;
 
   assign instruction_finished = ((instruction[23:21] == 3'b010) | (instruction[23:20] == 4'b0111)) | ( !actually_execute | (instruction[23:20] == 4'b0000));
+
+  // Calculating which registers will be read, for pipeline management purposes.
+
+  wire alu_bus_a_read = (instruction[23] == 1'b1) & (instruction[22:20] != 3'b100);
+  wire alu_bus_b_read = (instruction[23] == 1'b1) & (instruction[22:20] != 3'b011);
+
+  wire bus_a_read = alu_bus_a_read | (instruction[23:20] == 4'b0100) | (instruction[23:21] == 3'b001);
+  wire bus_b_read = alu_bus_b_read | (instruction[23:20] == 4'b0100) | (instruction[23:20] == 4'b0011);
+
+  wire[7:0] registers_read_a = bus_a_read ? instruction[15:8] : 8'b00000000;
+  wire[7:0] registers_read_b = bus_b_read ? instruction[7:0] : 8'b00000000;
+
+  assign registers_used = registers_read_a | registers_read_b;
+
 endmodule
