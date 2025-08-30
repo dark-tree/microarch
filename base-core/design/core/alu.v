@@ -2,6 +2,7 @@ module alu
   (
     input[7:0] in_a,
     input[7:0] in_b,
+    input[7:0] in_immediate,
     input[2:0] control,
     input execute,
     output reg zf = 1'b0,
@@ -18,7 +19,7 @@ module alu
   wire[7:0] and_result = in_a & in_b;
   wire[7:0] nand_result = ~and_result;
   wire[7:0] xor_result = in_a ^ in_b;
-  wire[7:0] shift_result = in_a >> in_b;
+  wire[7:0] shift_result = in_a >> in_immediate;
 
 
   always @(posedge clk)
