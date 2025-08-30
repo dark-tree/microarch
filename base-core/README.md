@@ -17,6 +17,7 @@
   - ```core/``` - Design files for the CPU core (microarch base-core) itself.
     - ```cu/``` - Design files for the Central Unit (so the pipeline logic and instruction decoding).
       - ```id_stage_1.v``` - Instruction decoding module for the first stage of the pipeline (also handling Program Counter incrementing).
+      - ```id_stage_2.v``` - Instruction decoding module for the second stage of the pipeline.
     - ```alu.v``` - Design file for the ALU.
     - ```register_bank.v``` - Design for a general purpose register bank.
     - ```mmu.v``` - Design file for the Memory Management Unit.
