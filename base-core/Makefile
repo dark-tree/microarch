@@ -3,7 +3,8 @@ VERILOG_DESIGN_FILES = 				\
 	design/core/mmu.v						\
 	design/core/alu.v						\
 	design/core/register_bank.v	\
-	design/core/cu/id_stage_1.v
+	design/core/cu/id_stage_1.v	\
+	design/core/cu/id_stage_2.v	\
 
 DATA_MEMORY_SELECTED = design/data_memory/basic_synchronized_ram.v
 
