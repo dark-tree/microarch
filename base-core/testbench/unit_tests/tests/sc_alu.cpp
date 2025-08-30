@@ -28,13 +28,26 @@ TESTS;
         assert_signal_vector(0, out, "keeping default value after setting 'execute' to true");
         clk = true;
         STEP(1);
+        clk = false;
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
         assert_signal_vector(5+7, out, "calculation");
         clk = false;
         in_a = 128;
         in_b = 128;
         STEP(1);
+
         assert_signal_vector(5+7, out, "result staying after change in inputs");
         clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
         STEP(1);
         assert_signal_vector(0, out, "overflowing calculation");
         assert_signal(false, zf, "checking if ZF was not set");
@@ -66,6 +79,13 @@ TESTS;
         execute = true;
         clk = true;
         STEP(1);
+        clk = false;
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
+
         assert_signal_vector(254, out, "calculation 1 (negative result)");
         assert_signal(false, zf, "checking if ZF was not set");
         assert_signal(true, cf, "checking if CF was set");
@@ -81,11 +101,28 @@ TESTS;
         clk = false;
         STEP(1);
 
-        assert_signal_vector(254, out, "checking if value was retained after a clock cycle");
-        assert_signal(false, zf, "checking if ZF was retained after a clock cycle");
-        assert_signal(true, cf, "checking if CF was retained after a clock cycle");
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
+
+        assert_signal_vector(254, out, "checking if value was retained after clock cycles");
+        assert_signal(false, zf, "checking if ZF was retained after clock cycle");
+        assert_signal(true, cf, "checking if CF was retained after clock cycle");
 
         execute = true;
+
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
+
+        // ALU is pipelined, so we put it data for calculation 3, before calculation 2 is done.
+
+        in_a = 200;
+        in_b = 100;
 
         STEP(1);
         clk = true;
@@ -98,8 +135,6 @@ TESTS;
         assert_signal(true, zf, "checking if ZF was set 2");
         assert_signal(false, cf, "checking if CF was not set 2");
 
-        in_a = 200;
-        in_b = 100;
 
         STEP(1);
         clk = true;
@@ -138,6 +173,12 @@ TESTS;
         execute = true;
         clk = true;
         STEP(1);
+        clk = false;
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
         assert_signal_vector(5, out, "calculation 1 ");
         assert_signal(false, zf, "checking if ZF was not set");
         assert_signal(false, cf, "checking if CF was not set");
@@ -151,11 +192,16 @@ TESTS;
         clk = true;
         STEP(1);
         clk = false;
+
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
         STEP(1);
 
-        assert_signal_vector(5, out, "checking if value was retained after a clock cycle");
-        assert_signal(false, zf, "checking if ZF was retained after a clock cycle");
-        assert_signal(false, cf, "checking if CF was retained after a clock cycle");
+        assert_signal_vector(5, out, "checking if value was retained after clock cycles");
+        assert_signal(false, zf, "checking if ZF was retained after clock cycles");
+        assert_signal(false, cf, "checking if CF was retained after clock cycles");
 
         STEP(1);
 
@@ -183,24 +229,16 @@ TESTS;
         execute = true;
         clk = true;
         STEP(1);
-        assert_signal_vector(0b10100000, out, "calculation");
-        assert_signal(false, zf, "checking if ZF was not set");
-        assert_signal(false, cf, "checking if CF was not set");
-
-        execute = false;
         clk = false;
-        in_a = 231;
-        in_b = 168;
-
         STEP(1);
         clk = true;
         STEP(1);
         clk = false;
         STEP(1);
+        assert_signal_vector(0b10100000, out, "calculation");
+        assert_signal(false, zf, "checking if ZF was not set");
+        assert_signal(false, cf, "checking if CF was not set");
 
-        assert_signal_vector(0b10100000, out, "checking if value was retained after a clock cycle");
-        assert_signal(false, zf, "checking if ZF was retained after a clock cycle");
-        assert_signal(false, cf, "checking if CF was retained after a clock cycle");
 
         STEP(1);
 
@@ -228,24 +266,16 @@ TESTS;
         execute = true;
         clk = true;
         STEP(1);
-        assert_signal_vector(0b01011111, out, "calculation");
-        assert_signal(false, zf, "checking if ZF was not set");
-        assert_signal(false, cf, "checking if CF was not set");
-
-        execute = false;
         clk = false;
-        in_a = 231;
-        in_b = 168;
-
         STEP(1);
         clk = true;
         STEP(1);
         clk = false;
         STEP(1);
+        assert_signal_vector(0b01011111, out, "calculation");
+        assert_signal(false, zf, "checking if ZF was not set");
+        assert_signal(false, cf, "checking if CF was not set");
 
-        assert_signal_vector(0b01011111, out, "checking if value was retained after a clock cycle");
-        assert_signal(false, zf, "checking if ZF was retained after a clock cycle");
-        assert_signal(false, cf, "checking if CF was retained after a clock cycle");
 
         STEP(1);
 
@@ -273,24 +303,17 @@ TESTS;
         execute = true;
         clk = true;
         STEP(1);
-        assert_signal_vector(0b01011010, out, "calculation");
-        assert_signal(false, zf, "checking if ZF was not set");
-        assert_signal(false, cf, "checking if CF was not set");
-
-        execute = false;
         clk = false;
-        in_a = 231;
-        in_b = 168;
-
         STEP(1);
         clk = true;
         STEP(1);
         clk = false;
         STEP(1);
+        assert_signal_vector(0b01011010, out, "calculation");
+        assert_signal(false, zf, "checking if ZF was not set");
+        assert_signal(false, cf, "checking if CF was not set");
 
-        assert_signal_vector(0b01011010, out, "checking if value was retained after a clock cycle");
-        assert_signal(false, zf, "checking if ZF was retained after a clock cycle");
-        assert_signal(false, cf, "checking if CF was retained after a clock cycle");
+
 
         STEP(1);
 
@@ -318,33 +341,107 @@ TESTS;
         execute = true;
         clk = true;
         STEP(1);
+        clk = false;
+        in_immediate = 168;
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
         assert_signal_vector(0b00001010, out, "calculation 1");
         assert_signal(false, zf, "checking if ZF was not set");
         assert_signal(false, cf, "checking if CF was not set");
 
-        execute = false;
-        clk = false;
-        in_immediate = 168;
-
         STEP(1);
         clk = true;
         STEP(1);
         clk = false;
         STEP(1);
 
-        assert_signal_vector(0b00001010, out, "checking if value was retained after a clock cycle");
-        assert_signal(false, zf, "checking if ZF was retained after a clock cycle");
-        assert_signal(false, cf, "checking if CF was retained after a clock cycle");
-        execute= true;
-        STEP(1);
-        clk = true;
-        STEP(1);
-        clk = false;
-        STEP(1);
 
         assert_signal_vector(0, out, "calculation 2");
         assert_signal(false, zf, "checking if ZF was not set");
         assert_signal(false, cf, "checking if CF was not set");
+    END_SIMULATION;
+
+
+
+    TEST(alu, test_multi_instruction_pipeline)
+        SET_SIGNAL(clk)
+        SET_SIGNAL(execute);
+        SET_SIGNAL(zf);
+        SET_SIGNAL(cf);
+        SET_SIGNAL_VECTOR(in_a);
+        SET_SIGNAL_VECTOR(in_b);
+        SET_SIGNAL_VECTOR(in_immediate);
+        SET_SIGNAL_VECTOR(out);
+        SET_SIGNAL_VECTOR(control);
+    START_SIMULATION;
+        control = 0b011;
+        clk = false;
+        execute = true;
+        in_a = 0b10100000;
+        in_immediate = 4;
+        in_b = 1;
+
+        STEP(1);
+
+        clk = true;
+        STEP(1);
+        clk = false;
+
+
+        control = 0b110;
+        in_a = 93;
+        in_b = 123;
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
+        assert_signal_vector(0b00001010, out, "calculation 1 - shift");
+        assert_signal(false, zf, "checking if ZF was not set");
+        assert_signal(false, cf, "checking if CF was not set");
+
+        STEP(1);
+        clk = true;
+        control = 0b111;
+        in_a = 98;
+        in_b = 102;
+        STEP(1);
+        clk = false;
+
+
+        STEP(1);
+
+
+        assert_signal_vector(93+123, out, "calculation 2 - add");
+        assert_signal(false, zf, "checking if ZF was not set");
+        assert_signal(false, cf, "checking if CF was not set");
+
+        STEP(1);
+        clk = true;
+        control = 0b010;
+        in_a = 0b10101010;
+        in_b = 0b11110000;
+        STEP(1);
+        clk = false;
+
+
+        STEP(1);
+        assert_signal_vector(252, out, "calculation 3 - cmp");
+        assert_signal(false, zf, "checking if ZF was not set");
+        assert_signal(true, cf, "checking if CF was set");
+
+        STEP(1);
+        clk = true;
+        STEP(1);
+        clk = false;
+        STEP(1);
+
+        assert_signal_vector(0b01011010, out, "calculation 4 - xor");
+        assert_signal(false, zf, "checking if ZF retained value");
+        assert_signal(true, cf, "checking if CF retained value");
     END_SIMULATION;
 
 END_TESTS;
