@@ -25,7 +25,7 @@ module alu
   begin
     if(execute == 1'b1) begin
       if(control == 3'b100) begin
-        out <= in_a;
+        out <= in_b;
       end
       if(control == 3'b110) begin
         out <= sum;

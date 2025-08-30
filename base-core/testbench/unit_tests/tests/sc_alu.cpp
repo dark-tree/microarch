@@ -128,8 +128,8 @@ TESTS;
         control = 0b100;
         clk = false;
         execute = false;
-        in_a = 5;
-        in_b = 218;
+        in_a = 218;
+        in_b = 5;
 
         STEP(1);
         execute = true;
@@ -141,8 +141,8 @@ TESTS;
 
         execute = false;
         clk = false;
-        in_a = 231;
-        in_b = 168;
+        in_a = 168;
+        in_b = 231;
 
         STEP(1);
         clk = true;
