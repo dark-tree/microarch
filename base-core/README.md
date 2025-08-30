@@ -19,6 +19,7 @@
       - ```id_stage_1.v``` - Instruction decoding module for the first stage of the pipeline (also handling Program Counter incrementing).
       - ```id_stage_2.v``` - Instruction decoding module for the second stage of the pipeline.
       - ```id_stage_3.v``` - Instruction decoding module for the third (and last) stage of the pipeline.
+      - ```pipeline.v``` - Module with Instruction Registers for all pipeline stages and logic for advancing/waiting of instructions in the pipeline.
     - ```alu.v``` - Design file for the ALU.
     - ```register_bank.v``` - Design for a general purpose register bank.
     - ```mmu.v``` - Design file for the Memory Management Unit.
