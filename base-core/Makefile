@@ -6,7 +6,8 @@ VERILOG_DESIGN_FILES = 				\
 	design/core/cu/id_stage_1.v	\
 	design/core/cu/id_stage_2.v	\
 	design/core/cu/id_stage_3.v	\
-	design/core/cu/pipeline.v		
+	design/core/cu/pipeline.v		\
+	design/core/cu/cu.v
 
 DATA_MEMORY_SELECTED = design/data_memory/basic_synchronized_ram.v
 
