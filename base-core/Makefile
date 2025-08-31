@@ -2,7 +2,12 @@
 VERILOG_DESIGN_FILES = 				\
 	design/core/mmu.v						\
 	design/core/alu.v						\
-	design/core/register_bank.v
+	design/core/register_bank.v	\
+	design/core/cu/id_stage_1.v	\
+	design/core/cu/id_stage_2.v	\
+	design/core/cu/id_stage_3.v	\
+	design/core/cu/pipeline.v		\
+	design/core/cu/cu.v
 
 DATA_MEMORY_SELECTED = design/data_memory/basic_synchronized_ram.v
 
@@ -20,7 +25,7 @@ waves:
 run: build_main
 	@echo "-- Running the microarch BaseCore SystemC main testbanch simulation --"
 	@echo "Running the simulation..."
-	obj_dir/Valu +trace
+	obj_dir/Vcu +trace
 	@echo "Launching GTK waveform visualizer"
 	gtkwave tracedump/traces.fst
 
@@ -32,10 +37,10 @@ unit_tests:
 build_main: verilate_main
 	@echo "-- Building microarch BaseCore testbench and verilated design --"
 	@echo "Building from generated Makefile..."
-	make -j -C obj_dir -f Valu.mk
+	make -j -C obj_dir -f Vcu.mk
 
 verilate_main:
 	@echo "-- Verilating microarch BaseCore design simulation --"
 	@echo "Generating object files..."
 	@echo "Generating Makefile..."
-	verilator -sc -exe --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) --top alu testbench/sc_main.cpp
+	verilator -sc -exe --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) --top cu testbench/sc_main.cpp
