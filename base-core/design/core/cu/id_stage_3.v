@@ -14,7 +14,7 @@ module id_stage_3
   assign register_bus = (instruction[23] == 1'b1) ? accumulator : ((instruction[23:20] == 4'b0010) ? mmu_data_register : instruction[7:0]);
   assign set_registers = (instruction[23] == 1'b1) | (instruction[23:20] == 4'b0010) | (instruction[23:20] == 4'b0001);
 
-  wire[7:0] _regset = (instruction[23:20] == 4'b0010) ? instruction[7:0] : instruction[15:8];
+  wire[7:0] _regset = instruction[15:8];
   assign regset = _regset;
   assign registers_set = (set_registers) ? _regset : ((trigger_cid) ? 8'b11110000 : 8'b00000000);
 endmodule
