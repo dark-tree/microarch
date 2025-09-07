@@ -5,6 +5,7 @@ module id_stage_1
     input cf,
     input zf,
     output alu_write_signal,
+    output[2:0] alu_control,
     output[7:0] regmask_a,
     output[7:0] regmask_b,
     output[7:0] alu_immediate,
@@ -82,5 +83,7 @@ module id_stage_1
   wire[7:0] registers_read_b = bus_b_read ? instruction[7:0] : 8'b00000000;
 
   assign registers_used = registers_read_a | registers_read_b;
+
+  assign alu_control = instruction[22:20];
 
 endmodule
