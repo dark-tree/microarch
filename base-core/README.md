@@ -12,8 +12,12 @@
   - ```traces_<module_name>_<test_name>.fst``` - Trace file from last execution of a specific test case.
 - ```obj_dir/``` - Directory for temporary build files.
 - ```design/``` - Directory for Verilog design files of the core itself.
+  - ```microcontroller.v``` - Microcontroller design with the BaseCore core and memory blocks.  
+  - ```program_memory/``` - A directory for program memory modules, that can be used by the design (modules can be sawpped by changing value of the ```PROGRAM_MEMORY_SELECTED``` variable in ```Makefile```).
+    - ```basic_async_rom.v``` - A very simple asynchronous ROM memory design (implementation of the ```program_memory``` module), with 24 bit memory cells.
+    Note: probably would not work very well outside of a simulation, because of timing problems - it's a huge combinatorial logic block expected to complete in a single clock cycle.
   - ```data_memory/``` - A directory for data memory modules, that can be used by the design (modules can be swapped by changing value of the ```DATA_MEMORY_SELECTED``` variable in ```Makefile```).
-    - ```basic_synchronized_ram.v``` - An implementation of 'data_memory' module (the MCU will be written in a way, that allows for easy swapping of memory implementations).
+    - ```basic_synchronized_ram.v``` - An implementation of ```data_memory``` module (the MCU will be written in a way, that allows for easy swapping of memory implementations).
   - ```core/``` - Design files for the CPU core (microarch base-core) itself.
     - ```cu/``` - Design files for the Central Unit (so the pipeline logic and instruction decoding).
       - ```id_stage_1.v``` - Instruction decoding module for the first stage of the pipeline (also handling Program Counter incrementing).
@@ -24,6 +28,7 @@
     - ```alu.v``` - Design file for the ALU.
     - ```register_bank.v``` - Design for a general purpose register bank.
     - ```mmu.v``` - Design file for the Memory Management Unit.
+    - ```core.v``` - Design file for the whole CPU core module (instantiating all other modules in this directory).
 - ```unit_tests.sh``` - A bash script for building and running tests for Verilog modules.
 - ```testbench/``` - SystemC testbench for testing the core.
   - ```sc_main.cpp``` - Main testbench simulation - for ad-hoc development and testing of modules.
