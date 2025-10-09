@@ -28,7 +28,8 @@ module register_bank
     input[7:0] i_bus,
     input[7:0] i_regmask,
     input clk,
-    input setter
+    input setter,
+    input trigger_cid
   );
 
   reg[7:0] registers[7:0];
@@ -61,6 +62,12 @@ module register_bank
           registers[i] <= i_bus;
         end
       end
+    end
+    if(trigger_cid == 1'b1) begin
+      registers[0] <=  8'b00000000;
+      registers[1] <=  8'b00000000;
+      registers[2] <=  8'b00000000;
+      registers[3] <=  8'b00000000;
     end
   end
 

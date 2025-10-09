@@ -51,7 +51,8 @@ module core
     .i_bus(register_write_bus),
     .i_regmask(write_regmask),
     .setter(register_write_signal),
-    .clk(clk)
+    .clk(clk),
+    .trigger_cid(trigger_cid)
   );
 
   wire mmu_signal;
