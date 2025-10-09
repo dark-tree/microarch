@@ -112,7 +112,7 @@ module core
     .mmu_data(mmu_out_data),
     .interrupt_return_address(interrupt_return_address),
     .set_interrupt_return_address(set_interrupt_return_address),
-    .interrupt_signal(interrupt_signal),
+    .interrupt_signal_staging(interrupt_signal),
     .trigger_cid(trigger_cid),
     .clk(clk)
   );

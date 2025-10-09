@@ -13,6 +13,7 @@ module id_stage_1
     input[7:0] register_bus_a,
     input[7:0] register_bus_b,
     output[7:0] ctr_value,
+    output[7:0] ctr_mask,
     output set_ctr,
     input[15:0] current_instruction_address,
     output[15:0] next_instruction_address,
@@ -31,7 +32,8 @@ module id_stage_1
   assign regmask_b = instruction[7:0];
   assign alu_immediate = instruction[7:0];
 
-  assign ctr_value = instruction[15:8];
+  assign ctr_value = register_bus_a;
+  assign ctr_mask = instruction[7:0];
 
   assign mmu_write = instruction[20];
   wire  staging_mmu_execute = (instruction[23:21] == 3'b001) ? 1'b1 : 1'b0;
@@ -74,7 +76,7 @@ module id_stage_1
   wire alu_bus_a_read = (instruction[23] == 1'b1) & (instruction[22:20] != 3'b100);
   wire alu_bus_b_read = (instruction[23] == 1'b1) & (instruction[22:20] != 3'b011);
 
-  wire bus_a_read = alu_bus_a_read | (instruction[23:20] == 4'b0100) | (instruction[23:21] == 3'b001);
+  wire bus_a_read = alu_bus_a_read | (instruction[23:20] == 4'b0100) | (instruction[23:21] == 3'b001) | (instruction[23:20] == 4'b0111);
   wire bus_b_read = alu_bus_b_read | (instruction[23:20] == 4'b0100) | (instruction[23:20] == 4'b0011);
 
   wire[7:0] registers_read_a = bus_a_read ? instruction[15:8] : 8'b00000000;
