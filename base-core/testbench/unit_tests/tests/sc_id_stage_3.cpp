@@ -70,8 +70,8 @@ TESTS;
 
         assert_signal(true, set_registers, "set_registers");
         assert_signal(false, trigger_cid, "trigger_cid");
-        assert_signal_vector(0b01010101, registers_set, "registers_set");
-        assert_signal_vector(0b01010101, regset, "regset");
+        assert_signal_vector(0b01110011, registers_set, "registers_set");
+        assert_signal_vector(0b01110011, regset, "regset");
         assert_signal_vector(97, register_bus, "regset");
 
     END_SIMULATION;
@@ -95,8 +95,8 @@ TESTS;
 
         assert_signal(true, set_registers, "set_registers");
         assert_signal(false, trigger_cid, "trigger_cid");
-        assert_signal_vector(0b01010101, registers_set, "registers_set");
-        assert_signal_vector(0b01010101, regset, "regset");
+        assert_signal_vector(0b01110011, registers_set, "registers_set");
+        assert_signal_vector(0b01110011, regset, "regset");
         assert_signal_vector(97, register_bus, "regset");
 
     END_SIMULATION;
@@ -121,7 +121,7 @@ TESTS;
         assert_signal(false, set_registers, "set_registers");
         assert_signal(false, trigger_cid, "trigger_cid");
         assert_signal_vector(0, registers_set, "registers_set");
-  
+
 
     END_SIMULATION;
 
