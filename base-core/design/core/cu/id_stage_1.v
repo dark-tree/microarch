@@ -39,15 +39,13 @@ module id_stage_1
   assign set_interrupt_return_address = interrupt_signal;
 
   wire[15:0] address_from_registers;
-  assign address_from_registers[7:0] = register_bus_a;
-  assign address_from_registers[15:8] = register_bus_b;
+  assign address_from_registers[7:0] = register_bus_b;
+  assign address_from_registers[15:8] = register_bus_a;
 
   wire [15:0] immediate_address;
-  assign immediate_address [7:0] = instruction[15:8];
-  assign immediate_address [15:8] = instruction[7:0];
+  assign immediate_address = instruction[15:0];
 
   wire [15:0] jump_address = (instruction[20] == 1'b1) ? immediate_address : address_from_registers;
-
 
   wire staging_set_ctr = (instruction[23:20] == 4'b0111) ? 1'b1 : 1'b0;
 
