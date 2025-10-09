@@ -23,11 +23,13 @@ module cu
     input[7:0] mmu_data,
     output[15:0] interrupt_return_address,
     output set_interrupt_return_address,
-    input interrupt_signal,
+    input interrupt_signal_staging,
     output trigger_cid
 
 
   );
+
+  wire interrupt_signal = interrupt_signal_staging & ctr[4];
 
   wire[23:0] instruction_s1;
   wire[23:0] instruction_s2;
@@ -61,14 +63,21 @@ module cu
 
   wire set_ctr;
   wire[7:0] ctr_value;
+  wire[7:0] ctr_mask;
+  wire[7:0] ctr_mask_negated = ~ctr_mask;
 
   always @(posedge clk)
   begin
     if(ready_for_next_instruction == 1'b1) begin
-      pc <= program_counter;
+      if(ctr[7:5] == 3'b000) begin
+        pc <= program_counter;
+      end
     end
     if(set_ctr == 1'b1) begin
-      ctr <= ctr_value;
+      ctr <= (ctr & ctr_mask_negated) | (ctr_value & ctr_mask);
+    end
+    if(interrupt_signal) begin
+      ctr[7:5] <= 3'b000;
     end
   end
 
@@ -111,7 +120,8 @@ module cu
     .instruction_finished(stage_1_finished),
     .flag_dependent(stage_1_using_flags),
     .set_ctr(set_ctr),
-    .ctr_value(ctr_value)
+    .ctr_value(ctr_value),
+    .ctr_mask(ctr_mask)
   );
 
   id_stage_2 id2 (
