@@ -1,4 +1,7 @@
 module microcontroller
+  #(
+    parameter PROGRAM_HEX_FILE /*verilator public_flat_rw*/ = ""
+  )
   (
     input clk,
     input interrupt_signal
@@ -40,7 +43,7 @@ module microcontroller
   );
 
 
-  program_memory pm (
+  program_memory #(PROGRAM_HEX_FILE) pm (
     .output_bus(instruction_bus),
     .address(instruction_address),
     .instruction_ready(instruction_ready),
