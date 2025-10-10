@@ -49,11 +49,16 @@ void Tokenizer::scanMultilineComment(Lexer& lexer) {
 }
 
 void Tokenizer::scanIdentifierOrLabel(Lexer& lexer, Token::Stream& sink) {
+
 	lexer.greedy(CharPredicates::alphanumeric);
 
 	if (lexer.match(':')) {
 		sink.push_back(lexer.endToken(Token::LABEL));
 		return;
+	}
+
+	if (lexer.match('.')) {
+		lexer.greedy(CharPredicates::alphanumeric);
 	}
 
 	sink.push_back(lexer.endToken(Token::IDENTIFIER));
@@ -191,7 +196,7 @@ void Tokenizer::scanRegisterSet(Lexer& lexer, Token::Stream& sink) {
 
 				Message::of()
 					.source(span)
-					.error("Register $" + StringUtil::ofChar(chr) + " specified out-of-order after register $" + StringUtil::ofChar(chr) + " in register set, registers must be specified in ascending order")
+					.error("Register $" + StringUtil::toString(chr) + " specified out-of-order after register $" + StringUtil::toString(chr) + " in register set, registers must be specified in ascending order")
 					.raise();
 			}
 
@@ -264,7 +269,7 @@ std::vector<Token> Tokenizer::tokenize(const SourceUnit* unit) {
 			continue;
 		}
 
-		if (lexer.match(',') || lexer.match('.')) {
+		if (lexer.match(',')) {
 			sink.push_back(lexer.endToken(Token::SYMBOL));
 			continue;
 		}

@@ -26,3 +26,18 @@ std::string StringUtil::ofChar(char ascii) {
 bool StringUtil::isPrintable(char c) {
 	return c > ' ' && c <= '~'; // exclude space
 }
+
+std::string StringUtil::toString(char c) {
+	return {c};
+}
+
+uint16_t StringUtil::parseIntWithBase(std::string_view view, int base) {
+	int value = 0;
+	auto [ptr, ec] = std::from_chars(view.data(), view.data() + view.size(), value, base);
+
+	if (ec == std::errc {}) {
+		return value;
+	}
+
+	return 0;
+}
