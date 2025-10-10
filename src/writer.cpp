@@ -69,11 +69,8 @@ void MicroWriter::putJmp(uint8_t srs, uint8_t ars) {
  * @param label the identifier of a label to link this jump with
  */
 void MicroWriter::putJmp(uint32_t label) {
-	const uint16_t high = (label & 0xFF00) >> 8;
-	const uint16_t low = (label & 0x00FF);
-
 	links.emplace_back(label, bytes.size() + 1);
-	putOp(OP_JPR, high, low);
+	putOp(OP_JPI, 0xFF, 0xFF);
 }
 
 /**
@@ -179,7 +176,7 @@ void MicroWriter::putCmp(uint8_t brs, uint8_t irs) {
 }
 
 MicroWriter::MicroWriter() {
-	pushCondition(T);
+	stack.push_back(T);
 }
 
 /// Apply the given condition code to all following instructions, until it is popped from the assembler stack using popCondition()
@@ -203,7 +200,6 @@ void MicroWriter::putLabel(uint32_t label) {
 /// Create and return a linked image of the program
 std::vector<uint8_t> MicroWriter::bake() {
 	std::vector<uint8_t> result = bytes;
-	uint8_t* buffer = result.data();
 
 	for (auto& link : links) {
 		uint16_t target = labels.at(link.label) & 0xFFFF;
@@ -213,7 +209,8 @@ std::vector<uint8_t> MicroWriter::bake() {
 			throw std::runtime_error {"Link offset out of bounds!"};
 		}
 
-		*reinterpret_cast<uint16_t*>(buffer + offset) = target;
+		result[offset] = (target & 0xFF00) >> 8;
+		result[offset + 1] = target & 0xFF;
 	}
 
 	return result;

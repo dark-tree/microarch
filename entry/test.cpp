@@ -6,6 +6,8 @@
 #include "vstl.hpp"
 
 TEST(tokenize_mixed) {
+
+	MessageSink::clear();
 	MessageSink::printer([&] (const Message& message) {
 		FAIL("Unexpected message! " + std::string(message.what()))
 	});
@@ -60,6 +62,7 @@ TEST(tokenize_mixed) {
 
 TEST(tokenize_invalid_regset) {
 
+	MessageSink::clear();
 	MessageSink::disable();
 
 	SourceUnit duplicate {"$11", "file"};
@@ -80,6 +83,7 @@ TEST(tokenize_invalid_regset) {
 
 TEST(assembler_basic) {
 
+	MessageSink::clear();
 	MessageSink::printer([&] (const Message& message) {
 		FAIL("Unexpected message! " + std::string(message.what()))
 	});
@@ -113,5 +117,100 @@ TEST(assembler_basic) {
 	CHECK(bytes[9] & 0xF0, 0); // ignore condition bits in NOPs
 	CHECK(bytes[10], 0b0000'0000);
 	CHECK(bytes[11], 0b0000'0000);
+
+};
+
+TEST(assembler_labels) {
+
+	MessageSink::clear();
+	MessageSink::printer([&] (const Message& message) {
+		FAIL("Unexpected message! " + std::string(message.what()))
+	});
+
+	SourceUnit unit {R"(
+
+		set $1, 10
+		set $2, 1
+
+		test:
+			nop
+			cmp $1, $2
+
+		z.jmp test
+
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	CHECK(bytes.size(), 15);
+
+	CHECK(bytes[0], 0b0001'1111);
+	CHECK(bytes[3], 0b0001'1111);
+	CHECK(bytes[9], 0b1111'1111);
+
+	CHECK(bytes[12], 0b0101'1011);
+	CHECK(bytes[13], 0);
+	CHECK(bytes[14], 6);
+
+};
+
+TEST(assembler_labels_undefined) {
+
+	int count = 0;
+	MessageSink::clear();
+
+	MessageSink::printer([&] (const Message& message) {
+		count ++;
+
+		CHECK(message.nodes().size(), 1);
+		CHECK(message.nodes().front().section().front().line, 3);
+	});
+
+	SourceUnit unit {R"(
+
+		jmp test
+
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	assembler.assemble(tokens);
+
+	CHECK(count, 1);
+
+};
+
+TEST(assembler_labels_redefined) {
+
+	int count = 0;
+	MessageSink::clear();
+
+	MessageSink::printer([&] (const Message& message) {
+		count ++;
+
+		CHECK(message.nodes().size(), 2);
+		CHECK(message.nodes().back().section().front().line, 3);
+		CHECK(message.nodes().front().section().front().line, 6);
+	});
+
+	SourceUnit unit {R"(
+
+		test:
+			nop
+
+		test:
+			mov $1, $
+
+		jmp test
+
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	assembler.assemble(tokens);
+
+	CHECK(count, 1);
 
 };

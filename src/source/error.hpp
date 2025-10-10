@@ -137,6 +137,19 @@ class Message : public std::exception {
 		}
 
 		/**
+		 * Check if this message contain an error
+		 */
+		bool error() const {
+			for (const Node& node : *m_nodes) {
+				if (node.severity() == ERROR) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		/**
 		 * @see MessageBuilder
 		 */
 		static MessageBuilder of();
@@ -155,6 +168,7 @@ class MessageSink {
 
 	private:
 
+		bool failed = false;
 		Printer m_printer = [] (const Message&) noexcept -> void {};
 
 		MessageSink() = default;
@@ -165,6 +179,9 @@ class MessageSink {
 
 		static void printer(const Printer& printer);
 		static void feed(const Message& message);
+
+		static void clear();
+		static bool error();
 
 		/// FIXME: remove and replace with guard
 		static void disable();
