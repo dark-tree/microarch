@@ -178,24 +178,26 @@ void Assembler::parseStatement(Parser parser, MicroWriter& writer) {
 	const Token& token = parser.expect(Token::IDENTIFIER);
 	std::string_view lexeme = token.lexeme();
 
-	std::string_view condition = "t";
 	std::string_view mnemonic = lexeme;
 
 	auto dot = lexeme.find('.');
+	MicroWriter::ConditionScopeGuard guard {nullptr};
 
 	if (dot != std::string_view::npos) {
-		condition = lexeme.substr(0, dot);
+		std::string_view condition = lexeme.substr(0, dot);
 		mnemonic = lexeme.substr(dot+1);
+
+		auto cit = conditions.find(condition);
+
+		if (cit == conditions.end()) {
+			Message::of().source(token.source()).error("Unknown condition code '" + std::string(condition) + "'").report();
+			return;
+		}
+
+		writer.pushCondition(cit->second);
+		guard.writer = &writer;
 	}
 
-	auto cid = conditions.find(condition);
-
-	if (cid == conditions.end()) {
-		Message::of().source(token.source()).error("Unknown condition code '" + std::string(condition) + "'").report();
-		return;
-	}
-
-	auto guard = writer.pushCondition(cid->second);
 	parseOperation(parser, mnemonic, writer);
 
 }
@@ -204,6 +206,28 @@ void Assembler::parseRoot(Parser parser, MicroWriter& writer) {
 	while (parser) {
 
 		if (parser.match(Token::BREAK)) {
+			continue;
+		}
+
+		if (parser.match("if")) {
+			SourceSpan source = parser.expect(Token::IDENTIFIER).source();
+
+			auto cid = conditions.find(source.view());
+
+			if (cid == conditions.end()) {
+				Message::of().source(source).error("Unknown condition code '" + source.str() + "'").report();
+			}
+
+			parser.expect("begin");
+			Parser block = parser.block("begin", "end", "block");
+
+			if (cid != conditions.end()) {
+				MicroWriter::ConditionScopeGuard guard {&writer};
+				writer.pushCondition(cid->second);
+
+				parseRoot(block, writer);
+			}
+
 			continue;
 		}
 

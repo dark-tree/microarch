@@ -214,3 +214,51 @@ TEST(assembler_labels_redefined) {
 	CHECK(count, 1);
 
 };
+
+TEST(assembler_if_block) {
+
+	MessageSink::clear();
+	MessageSink::printer([&] (const Message& message) {
+		FAIL("Unexpected message! " + std::string(message.what()))
+	});
+
+	SourceUnit unit {R"(
+
+		set $1, 42
+		set $4, 1
+		set $5, 0
+
+		if f begin
+			mov $3, $2
+			mov $4, $3
+			t.mov $5, $4
+
+			if z begin
+				set $5, 0
+			end
+
+			mov $6, $5
+		end
+
+		mov $7, $5
+
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	CHECK(bytes.size(), 9*3);
+
+	// check condition codes
+	CHECK(bytes[0*3] & 0xF, 0b1111);
+	CHECK(bytes[1*3] & 0xF, 0b1111);
+	CHECK(bytes[2*3] & 0xF, 0b1111);
+	CHECK(bytes[3*3] & 0xF, 0b0000);
+	CHECK(bytes[4*3] & 0xF, 0b0000);
+	CHECK(bytes[5*3] & 0xF, 0b1111);
+	CHECK(bytes[6*3] & 0xF, 0b1011);
+	CHECK(bytes[7*3] & 0xF, 0b0000);
+	CHECK(bytes[8*3] & 0xF, 0b1111);
+
+};

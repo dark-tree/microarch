@@ -10,18 +10,6 @@ class MicroWriter {
 		/// Removes the previous condition that was applied with pushCondition()
 		void popCondition();
 
-		struct ConditionScopeGuard {
-			MicroWriter& writer;
-
-			ConditionScopeGuard(MicroWriter& writer)
-				: writer(writer) {
-			}
-
-			~ConditionScopeGuard() {
-				writer.popCondition();
-			}
-		};
-
 		// instruction flag parts
 		static constexpr uint8_t ZF_TRUE = 0b1000;
 		static constexpr uint8_t ZF_FALSE = 0b0100;
@@ -54,6 +42,21 @@ class MicroWriter {
 		};
 
 	public:
+
+		struct ConditionScopeGuard {
+			MicroWriter* writer;
+
+			ConditionScopeGuard(MicroWriter* writer)
+				: writer(writer) {
+			}
+
+			~ConditionScopeGuard() {
+				if (writer) {
+					writer->popCondition();
+					writer = nullptr;
+				}
+			}
+		};
 
 		enum Cond : uint8_t {
 			F   = 0,
@@ -221,7 +224,7 @@ class MicroWriter {
 		MicroWriter();
 
 		/// Apply the given condition code to all following instructions, until it is popped from the assembler stack using popCondition()
-		ConditionScopeGuard pushCondition(Cond condition);
+		void pushCondition(Cond condition);
 
 		/// Define a label at the current offset, label can be used before it is defined
 		void putLabel(uint32_t label);
