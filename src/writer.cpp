@@ -180,9 +180,8 @@ MicroWriter::MicroWriter() {
 }
 
 /// Apply the given condition code to all following instructions, until it is popped from the assembler stack using popCondition()
-MicroWriter::ConditionScopeGuard MicroWriter::pushCondition(Cond condition) {
+void MicroWriter::pushCondition(Cond condition) {
 	stack.push_back(condition);
-	return {*this};
 }
 
 /// Removes the previous condition that was applied with pushCondition()
