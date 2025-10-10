@@ -14,7 +14,7 @@ class Tokenizer {
 			{'e', 0x1b}, // escape (non standard)
 			{'f', '\f'}, // form feed
 			{'n', '\n'}, // new line
-			{'r', '\r'}, // carrige return
+			{'r', '\r'}, // carriage return
 			{'t', '\t'}, // tab
 			{'v', '\v'}, // vertical tab
 			{'\\', '\\'},

@@ -27,15 +27,18 @@ class Assembler {
 		};
 
 		struct Label {
-			uint32_t id;
-			SourceSpan location;
+			uint32_t id = 0;
+			SourceSpan definition {};
+			SourceSpan last_usage {};
+			bool defined = false;
 		};
 
-		uint32_t next_label_id = 0;
+		std::unordered_map<std::string_view, Label> labels;
+		Label& getOrCreateLabel(std::string_view label);
 
 		uint8_t parseRegisterSet(Parser& parser);
 		uint8_t parseImmediate(Parser& parser);
-		void emitOperation(Parser parser, std::string_view mnemonic, MicroWriter& writer);
+		void parseOperation(Parser parser, std::string_view mnemonic, MicroWriter& writer);
 		void parseStatement(Parser parser, MicroWriter& writer);
 		void parseRoot(Parser parser, MicroWriter& writer);
 

@@ -4,6 +4,21 @@
  * class Assembler
  */
 
+Assembler::Label& Assembler::getOrCreateLabel(std::string_view name) {
+	static uint32_t next = 0;
+
+	auto lit = labels.find(name);
+
+	if (lit != labels.end()) {
+		return lit->second;
+	}
+
+	Label& label = labels[name];
+	label.id = next ++;
+
+	return label;
+}
+
 uint8_t Assembler::parseRegisterSet(Parser& parser) {
 	uint8_t set = 0;
 	auto lexeme = parser.expect(Token::REGSET).lexeme();
@@ -29,7 +44,7 @@ uint8_t Assembler::parseImmediate(Parser& parser) {
 	return StringUtil::parseIntWithBase(lexeme, 10);
 }
 
-void Assembler::emitOperation(Parser parser, std::string_view mnemonic, MicroWriter& writer) {
+void Assembler::parseOperation(Parser parser, std::string_view mnemonic, MicroWriter& writer) {
 
 	if (mnemonic == "nop") {
 		writer.putNop();
@@ -73,7 +88,10 @@ void Assembler::emitOperation(Parser parser, std::string_view mnemonic, MicroWri
 			return;
 		}
 
-		writer.putJmp(parseImmediate(parser));
+		const Token& token = parser.expect(Token::IDENTIFIER);
+		Label& label = getOrCreateLabel(token.lexeme());
+		label.last_usage = token.source();
+		writer.putJmp(label.id);
 		return;
 	}
 
@@ -173,39 +191,40 @@ void Assembler::parseStatement(Parser parser, MicroWriter& writer) {
 	auto cid = conditions.find(condition);
 
 	if (cid == conditions.end()) {
-		Message::of().source(token.source()).error("Unknown condition code '" + std::string(condition) + "'");
+		Message::of().source(token.source()).error("Unknown condition code '" + std::string(condition) + "'").report();
 		return;
 	}
 
 	auto guard = writer.pushCondition(cid->second);
-	emitOperation(parser, mnemonic, writer);
+	parseOperation(parser, mnemonic, writer);
 
 }
 
 void Assembler::parseRoot(Parser parser, MicroWriter& writer) {
-	std::unordered_map<std::string_view, Label> labels;
-
 	while (parser) {
 
 		if (parser.match(Token::BREAK)) {
 			continue;
 		}
 
-		if (const Token* label = parser.accept(Token::LABEL)) {
-			std::string_view lexeme = label->lexeme();
+		if (const Token* token = parser.accept(Token::LABEL)) {
+			std::string_view lexeme = token->lexeme();
 			std::string_view name = lexeme.substr(0, lexeme.length() - 1);
 
-			if (labels.contains(name)) {
-				Message::of().source(label->source())
+			Label& label = getOrCreateLabel(name);
+
+			if (label.defined) {
+				Message::of().source(token->source())
 					.error("Label '" + std::string(name) + "' already declared")
-					.next().source(labels.at(name).location).info("Previous declaration here");
+					.next().source(label.definition).info("Previous declaration here")
+					.report();
 
 				continue;
 			}
 
-			labels[name] = {next_label_id, label->source()};
-			writer.putLabel(next_label_id);
-			next_label_id ++;
+			label.defined = true;
+			label.definition = token->source();
+			writer.putLabel(label.id);
 			continue;
 		}
 
@@ -219,6 +238,19 @@ std::vector<uint8_t> Assembler::assemble(const std::vector<Token>& tokens) {
 	MicroWriter writer;
 
 	parseRoot(parser, writer);
+
+	// we verify it here as writer will just throw an unhelpful out-of-bounds error
+	// while here we can actually display the label name to hte user
+	for (const auto& pair : labels) {
+		if (!pair.second.defined) {
+			Message::of().source(pair.second.last_usage).error("Label '" + std::string(pair.first) + "' used but not declared").report();
+		}
+	}
+
+	// bail out early if something went wrong
+	if (MessageSink::error()) {
+		return {};
+	}
 
 	return writer.bake();
 }

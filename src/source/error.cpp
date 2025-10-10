@@ -22,8 +22,23 @@ void MessageSink::printer(const Printer& printer) {
 }
 
 void MessageSink::feed(const Message& message) {
-	instance().m_printer(message);
+	MessageSink& sink = instance();
+
+	sink.m_printer(message);
+
+	if (!sink.failed) {
+		sink.failed = message.error();
+	}
 }
+
+void MessageSink::clear() {
+	instance().failed = false;
+}
+
+bool MessageSink::error() {
+	return instance().failed;
+}
+
 
 void MessageSink::disable() {
 	instance().m_printer = [] (const Message&) noexcept -> void {};
