@@ -46,129 +46,132 @@ uint8_t Assembler::parseImmediate(Parser& parser) {
 
 void Assembler::parseOperation(Parser parser, std::string_view mnemonic, MicroWriter& writer) {
 
-	if (mnemonic == "nop") {
-		writer.putNop();
-		return;
-	}
+	try {
+		if (mnemonic == "nop") {
+			writer.putNop();
+			return;
+		}
 
-	if (mnemonic == "set") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseImmediate(parser);
+		if (mnemonic == "set") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseImmediate(parser);
 
-		writer.putSet(arg1, arg2);
-		return;
-	}
+			writer.putSet(arg1, arg2);
+			return;
+		}
 
-	if (mnemonic == "ldm") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
-
-		writer.putLdm(arg1, arg2);
-		return;
-	}
-
-	if (mnemonic == "stm") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
-
-		writer.putStm(arg1, arg2);
-		return;
-	}
-
-	if (mnemonic == "jmp") {
-		if (parser.peek().type() == Token::REGSET) {
+		if (mnemonic == "ldm") {
 			uint8_t arg1 = parseRegisterSet(parser);
 			parser.expect(",");
 			uint8_t arg2 = parseRegisterSet(parser);
 
-			writer.putJmp(arg1, arg2);
+			writer.putLdm(arg1, arg2);
 			return;
 		}
 
-		const Token& token = parser.expect(Token::IDENTIFIER);
-		Label& label = getOrCreateLabel(token.lexeme());
-		label.last_usage = token.source();
-		writer.putJmp(label.id);
-		return;
-	}
+		if (mnemonic == "stm") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
 
-	if (mnemonic == "cid") {
-		writer.putCid(parseImmediate(parser));
-		return;
-	}
+			writer.putStm(arg1, arg2);
+			return;
+		}
 
-	if (mnemonic == "ctr") {
-		writer.putCtr(parseImmediate(parser));
-		return;
-	}
+		if (mnemonic == "jmp") {
+			if (parser.peek().type() == Token::REGSET) {
+				uint8_t arg1 = parseRegisterSet(parser);
+				parser.expect(",");
+				uint8_t arg2 = parseRegisterSet(parser);
 
-	if (mnemonic == "nad") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+				writer.putJmp(arg1, arg2);
+				return;
+			}
 
-		writer.putNad(arg1, arg2);
-		return;
-	}
+			const Token& token = parser.expect(Token::IDENTIFIER);
+			Label& label = getOrCreateLabel(token.lexeme());
+			label.last_usage = token.source();
+			writer.putJmp(label.id);
+			return;
+		}
 
-	if (mnemonic == "and") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+		if (mnemonic == "cid") {
+			writer.putCid(parseImmediate(parser));
+			return;
+		}
 
-		writer.putAnd(arg1, arg2);
-		return;
-	}
+		if (mnemonic == "ctr") {
+			writer.putCtr(parseImmediate(parser));
+			return;
+		}
 
-	if (mnemonic == "xor") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+		if (mnemonic == "nad") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
 
-		writer.putXor(arg1, arg2);
-		return;
-	}
+			writer.putNad(arg1, arg2);
+			return;
+		}
 
-	if (mnemonic == "shr") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+		if (mnemonic == "and") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
 
-		writer.putShr(arg1, arg2);
-		return;
-	}
+			writer.putAnd(arg1, arg2);
+			return;
+		}
 
-	if (mnemonic == "mov") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+		if (mnemonic == "xor") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
 
-		writer.putMov(arg1, arg2);
-		return;
-	}
+			writer.putXor(arg1, arg2);
+			return;
+		}
 
-	if (mnemonic == "add") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+		if (mnemonic == "shr") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
 
-		writer.putAdd(arg1, arg2);
-		return;
-	}
+			writer.putShr(arg1, arg2);
+			return;
+		}
 
-	if (mnemonic == "cmp") {
-		uint8_t arg1 = parseRegisterSet(parser);
-		parser.expect(",");
-		uint8_t arg2 = parseRegisterSet(parser);
+		if (mnemonic == "mov") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
 
-		writer.putCmp(arg1, arg2);
-		return;
-	}
+			writer.putMov(arg1, arg2);
+			return;
+		}
 
-	parser.unreachable();
+		if (mnemonic == "add") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
+
+			writer.putAdd(arg1, arg2);
+			return;
+		}
+
+		if (mnemonic == "cmp") {
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseRegisterSet(parser);
+
+			writer.putCmp(arg1, arg2);
+			return;
+		}
+
+		parser.unreachable();
+
+	} catch (Message& message) {}
 
 }
 
