@@ -78,4 +78,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	target_compile_options(microarch_common INTERFACE /W4 /we4715)
 endif()
 
-add_executable(microarch entry/main.cpp)
+add_executable(microarch
+		entry/main.cpp
+		${SOURCES}
+)
+
+target_link_libraries(microarch PRIVATE
+		microarch_common
+)
