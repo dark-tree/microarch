@@ -28,6 +28,7 @@
     - ```alu.v``` - Design file for the ALU.
     - ```register_bank.v``` - Design for a general purpose register bank.
     - ```mmu.v``` - Design file for the Memory Management Unit.
+    - ```peripheal_control.v``` - Design file for a combinatorial logic unit, managing IO interfaces.
     - ```core.v``` - Design file for the whole CPU core module (instantiating all other modules in this directory).
 - ```unit_tests.sh``` - A bash script for building and running tests for Verilog modules.
 - ```executables/``` - Directory for microarch executable files.

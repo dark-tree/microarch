@@ -1,4 +1,8 @@
 module mmu
+  #(
+    parameter IO_MEMORY_SPACE_SIZE=3
+
+  )
   (
     // CPU-side controls.
     input write, // 0 - memory_read, 1 - write
@@ -18,11 +22,13 @@ module mmu
     input[7:0] memory_out,
     input memory_ready,
     output pre_completed,
-    output reg operation_ongoing = 1'b0
+    output reg operation_ongoing = 1'b0,
+    // CPU peripheals
+    input [7:0] io_registers_read[0:IO_MEMORY_SPACE_SIZE-1],
+    output reg[7:0] io_registers_write[0:IO_MEMORY_SPACE_SIZE-1]
   );
 
   reg [7:0] spec_mem_interrupt[1:0];
-
 
 
   always @(posedge clk)
@@ -47,17 +53,27 @@ module mmu
           spec_mem_interrupt[address[0]] <= in_data;
           completed <= 1'b1;
         end else begin
-          memory_write_signal <= 1'b1;
-          memory_in <= in_data;
-          operation_ongoing <= 1'b1;
+          if(address < IO_MEMORY_SPACE_SIZE + 2) begin
+            io_registers_write[address - 2] <= in_data;
+            completed <= 1'b1;
+          end else begin
+            memory_write_signal <= 1'b1;
+            memory_in <= in_data;
+            operation_ongoing <= 1'b1;
+          end
         end
       end else begin
         if(|address[7:1] == 1'b0) begin
           out_data <= spec_mem_interrupt[address[0]];
           completed <= 1'b1;
         end else begin
-          memory_read_signal <= 1'b1;
-          operation_ongoing <= 1'b1;
+          if(address < IO_MEMORY_SPACE_SIZE + 2) begin
+            out_data <= io_registers_read[address - 2];
+            completed <= 1'b1;
+          end else begin
+            memory_read_signal <= 1'b1;
+            operation_ongoing <= 1'b1;
+          end
         end
       end
     end
