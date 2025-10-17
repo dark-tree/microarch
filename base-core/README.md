@@ -28,8 +28,11 @@
     - ```alu.v``` - Design file for the ALU.
     - ```register_bank.v``` - Design for a general purpose register bank.
     - ```mmu.v``` - Design file for the Memory Management Unit.
+    - ```peripheal_control.v``` - Design file for a combinatorial logic unit, managing IO interfaces.
     - ```core.v``` - Design file for the whole CPU core module (instantiating all other modules in this directory).
 - ```unit_tests.sh``` - A bash script for building and running tests for Verilog modules.
+- ```executables/``` - Directory for microarch executable files.
+  - ```simple_loop.hex``` - An executable hex file for testing, it has an infinite loop with several random instructions.
 - ```testbench/``` - SystemC testbench for testing the core.
   - ```sc_main.cpp``` - Main testbench simulation - for ad-hoc development and testing of modules.
   - ```unit_tests/``` - Unit test system.
@@ -55,12 +58,31 @@ Note: this will delete all trace files from ```tracedump/```
 
 ###### Running the main simulation:
 
+Main simulation is running the microcontroller in Verilator (programmed with the provided hex file).
+
 The main testbench simulation source is located in the  ```sc_main.cpp``` file (that's where you can manipulate the inputs).
 To start it, execute:
 
-```make run```
+```make run TARGET=<hex file name>```
 
-After the simulation completes, a ```GTKWave``` window will open (displaying traces, ie. a timeline of value changes on all inputs/outputs of the design).  Note: To see the traces you need to select the module from a drop-down menu on the left and then select I/O ports by double-clicking them.
+Example:
+
+```make run TARGET=executables/simple_loop.hex```
+
+If no firmware file is provided, the program memory will be initialized with random data.
+
+Hex program file format (each 3-byte instruction is written in a new line, starting from the first byte):
+
+```
+<byte 1><byte 2><byte 3>  //Instruction 1 (will be placed at address 0x0000)
+<byte 1><byte 2><byte 3>  //Instruction 2 (will be placed at address 0x0000)
+...
+<byte 1><byte 2><byte 3>  //Instruction n (will be placed at address 0x0000)
+```
+
+After the simulation completes, a ```GTKWave``` window will open (displaying traces, ie. a timeline of value changes on all signals of the design).  Note: To see the traces you need to select the module from a drop-down menu on the left and then select signals by double-clicking them.
+
+
 
 ###### Running unit tests:
 

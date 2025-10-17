@@ -49,6 +49,12 @@ int sc_main(int argc, char* argv[]) {
 		top->clk(clk);
 
 		SET_SIGNAL(interrupt_signal);
+		SET_SIGNAL_VECTOR(gpio_a_write);
+		SET_SIGNAL_VECTOR(gpio_a_read);
+		SET_SIGNAL_VECTOR(gpio_a_ctr);
+		gpio_a_read = 0b11111010;
+
+
 		interrupt_signal = false;
 		// SET_SIGNAL_VECTOR(program_counter);
 		// SET_SIGNAL_VECTOR(instruction_bus);
@@ -170,6 +176,7 @@ int sc_main(int argc, char* argv[]) {
 
 		for(int i = 0; i<2000;i++)
 		{
+
 				STEP(1);
 
 		}

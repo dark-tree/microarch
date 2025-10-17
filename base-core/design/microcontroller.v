@@ -1,7 +1,13 @@
 module microcontroller
+  #(
+    parameter PROGRAM_HEX_FILE /*verilator public_flat_rw*/ = ""
+  )
   (
     input clk,
-    input interrupt_signal
+    input interrupt_signal,
+    input [7:0] gpio_a_read,
+    output [7:0] gpio_a_write,
+    output [7:0] gpio_a_ctr
   );
 
   wire[7:0] data_bus_write;
@@ -25,7 +31,10 @@ module microcontroller
     .instruction_bus(instruction_bus),
     .instruction_ready(instruction_ready),
     .instruction_address(instruction_address),
-    .interrupt_signal(interrupt_signal)
+    .interrupt_signal(interrupt_signal),
+    .gpio_a_read(gpio_a_read),
+    .gpio_a_write(gpio_a_write),
+    .gpio_a_ctr(gpio_a_ctr)
   );
 
 
@@ -40,7 +49,7 @@ module microcontroller
   );
 
 
-  program_memory pm (
+  program_memory #(PROGRAM_HEX_FILE) pm (
     .output_bus(instruction_bus),
     .address(instruction_address),
     .instruction_ready(instruction_ready),

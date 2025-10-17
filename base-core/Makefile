@@ -1,14 +1,15 @@
 
-VERILOG_DESIGN_FILES = 				\
-	design/core/mmu.v						\
-	design/core/alu.v						\
-	design/core/register_bank.v	\
-	design/core/cu/id_stage_1.v	\
-	design/core/cu/id_stage_2.v	\
-	design/core/cu/id_stage_3.v	\
-	design/core/cu/pipeline.v		\
-	design/core/cu/cu.v					\
-	design/core/core.v					\
+VERILOG_DESIGN_FILES = 						\
+	design/core/mmu.v								\
+	design/core/peripheal_control.v	\
+	design/core/alu.v								\
+	design/core/register_bank.v			\
+	design/core/cu/id_stage_1.v			\
+	design/core/cu/id_stage_2.v			\
+	design/core/cu/id_stage_3.v			\
+	design/core/cu/pipeline.v				\
+	design/core/cu/cu.v							\
+	design/core/core.v							\
 	design/microcontroller.v
 
 DATA_MEMORY_SELECTED = design/data_memory/basic_synchronized_ram.v
@@ -47,4 +48,4 @@ verilate_main:
 	@echo "-- Verilating microarch BaseCore design simulation --"
 	@echo "Generating object files..."
 	@echo "Generating Makefile..."
-	verilator -sc -exe --trace-fst $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) $(PROGRAM_MEMORY_SELECTED) --top microcontroller testbench/sc_main.cpp
+	verilator -sc -exe --trace-fst -GPROGRAM_HEX_FILE="\"$(TARGET)\"" $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) $(PROGRAM_MEMORY_SELECTED) --top microcontroller testbench/sc_main.cpp

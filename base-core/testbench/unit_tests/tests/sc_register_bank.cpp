@@ -6,12 +6,13 @@ TESTS;
     TEST(register_bank, test_single_register_writes_and_reads)
         SET_SIGNAL(clk)
         SET_SIGNAL(setter);
+        SET_SIGNAL(trigger_cid);
         SET_SIGNAL_VECTOR(o_regmask_b);
         SET_SIGNAL_VECTOR(o_bus_b);
         SET_SIGNAL_VECTOR(o_regmask_a);
         SET_SIGNAL_VECTOR(o_bus_a);
         SET_SIGNAL_VECTOR(i_bus);
-        SET_SIGNAL_VECTOR(i_regmask)
+        SET_SIGNAL_VECTOR(i_regmask);
     START_SIMULATION;
         i_bus = 46;
         i_regmask = 0b01000000;
@@ -56,6 +57,7 @@ TESTS;
     TEST(register_bank, test_multi_register_reads)
         SET_SIGNAL(clk)
         SET_SIGNAL(setter);
+        SET_SIGNAL(trigger_cid);
         SET_SIGNAL_VECTOR(o_regmask_b);
         SET_SIGNAL_VECTOR(o_bus_b);
         SET_SIGNAL_VECTOR(o_regmask_a);

@@ -10,7 +10,10 @@ module core
     input[23:0] instruction_bus,
     input instruction_ready,
     output[15:0] instruction_address,
-    input interrupt_signal
+    input interrupt_signal,
+    input [7:0] gpio_a_read,
+    output [7:0] gpio_a_write,
+    output [7:0] gpio_a_ctr
   );
 
   wire[7:0] register_bus_a;
@@ -51,7 +54,8 @@ module core
     .i_bus(register_write_bus),
     .i_regmask(write_regmask),
     .setter(register_write_signal),
-    .clk(clk)
+    .clk(clk),
+    .trigger_cid(trigger_cid)
   );
 
   wire mmu_signal;
@@ -67,7 +71,12 @@ module core
   wire[15:0] interrupt_return_address;
   wire set_interrupt_return_address;
 
-  mmu m (
+  parameter IO_MEMORY_SPACE_SIZE=3;
+
+  wire [7:0] io_registers_read[0:IO_MEMORY_SPACE_SIZE-1];
+  wire [7:0] io_registers_write[0:IO_MEMORY_SPACE_SIZE-1];
+
+  mmu #(IO_MEMORY_SPACE_SIZE) m (
     .write(mmu_write),
     .address(mmu_address),
     .in_data(mmu_in_data),
@@ -84,9 +93,18 @@ module core
     .memory_write_signal(data_write_signal),
     .pre_completed(mmu_pre_completed),
     .operation_ongoing(mmu_operation_ongoing),
+    .io_registers_write(io_registers_write),
+    .io_registers_read(io_registers_read),
     .clk(clk)
   );
 
+  peripheal_control #(IO_MEMORY_SPACE_SIZE) pc (
+    .gpio_a_read(gpio_a_read),
+    .gpio_a_write(gpio_a_write),
+    .gpio_a_ctr(gpio_a_ctr),
+    .io_registers_write(io_registers_write),
+    .io_registers_read(io_registers_read)
+  );
 
   cu c (
     .program_counter(instruction_address),
@@ -111,7 +129,7 @@ module core
     .mmu_data(mmu_out_data),
     .interrupt_return_address(interrupt_return_address),
     .set_interrupt_return_address(set_interrupt_return_address),
-    .interrupt_signal(interrupt_signal),
+    .interrupt_signal_staging(interrupt_signal),
     .trigger_cid(trigger_cid),
     .clk(clk)
   );
