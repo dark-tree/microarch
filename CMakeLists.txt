@@ -86,3 +86,5 @@ add_executable(microarch
 target_link_libraries(microarch PRIVATE
 		microarch_common
 )
+
+install(TARGETS microarch)
