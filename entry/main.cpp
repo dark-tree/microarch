@@ -6,11 +6,6 @@
 
 void assemble(const std::string& input, const std::string& output, bool use_hex) {
 
-	if (use_hex) {
-		printf("Hexadecimal output mode is currently unsupported!\n");
-		exit(1);
-	}
-
 	std::string source = file::read(input);
 
 	MessageSink::clear();
@@ -47,6 +42,26 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 
 	if (MessageSink::error()) {
 		printf("\nCompilation aborted due to errors; no output produced.\n");
+		return;
+	}
+
+	if (use_hex) {
+		char const hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+		std::string result;
+
+		for (size_t i = 0, c = 0; i < bytes.size(); i ++) {
+			char const byte = bytes[i];
+
+			result += hex[(byte & 0xF0) >> 4];
+			result += hex[(byte & 0x0F) >> 0];
+
+			if (++ c >= 3) {
+				result += '\n';
+				c = 0;
+			}
+		}
+
+		file::write(output, result.data(), result.size());
 		return;
 	}
 

@@ -16,6 +16,10 @@ std::string file::read(const std::string& path) {
 }
 
 void file::write(const std::string& path, const std::vector<uint8_t>& content) {
+	write(path, reinterpret_cast<const char*>(content.data()), content.size());
+}
+
+void file::write(const std::string& path, const char* data, size_t size) {
 	std::ofstream ofs (path);
 
 	if (ofs.fail()) {
@@ -23,6 +27,6 @@ void file::write(const std::string& path, const std::vector<uint8_t>& content) {
 		exit(2);
 	}
 
-	ofs.write(reinterpret_cast<const char*>(content.data()), content.size());
+	ofs.write(data, size);
 	ofs.close();
 }
