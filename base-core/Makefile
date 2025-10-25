@@ -34,6 +34,10 @@ run: build_main
 	@echo "Launching GTK waveform visualizer"
 	gtkwave tracedump/traces.fst
 
+sim:
+	yosys post_synthesis_sim.ys
+	gtkwave tracedump/post_synthesis.fst
+
 unit_tests:
 	@echo "-- Running the microarch BaseCore SystemC unit tests --"
 	@echo "Running the simulation..."
