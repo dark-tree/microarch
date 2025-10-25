@@ -177,6 +177,14 @@ int sc_main(int argc, char* argv[]) {
 		for(int i = 0; i<2000;i++)
 		{
 
+				if(i > 400 && i< 420)
+				{
+						interrupt_signal = true;
+				}
+				else
+				{
+						interrupt_signal = false;
+				}
 				STEP(1);
 
 		}
