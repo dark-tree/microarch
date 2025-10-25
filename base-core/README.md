@@ -7,6 +7,7 @@
 
 - ```README.md``` - You are here.
 - ```Makefile``` - Build script for the project. See the **Building and running the testbench** section for details.
+- ```post_synthesis_sim.ys``` - Yosys script for running the post-synthesis simulation.
 - ```tracedump/``` - Directory for trace files from testbench simulations in FST format (can be opened with GTKWave). NOTE: Trace files will only appear in the directory after building and running the testbench - they are not included in the git repository.
   - ```traces.fst``` - Trace file from the main testbench simulation.
   - ```traces_<module_name>_<test_name>.fst``` - Trace file from last execution of a specific test case.
@@ -39,6 +40,13 @@
     - ```test_runner.h``` - A simple system for running unit tests.
     - ```tests/``` - Test files (one file per module)
       - ```sc_<module_name>.cpp``` - File with tests for a given module, for example ```sc_alu.cpp```.
+- ```chips/``` - Support packages for specific FPGA chips (platform-specific constraint files, top modules and build scrips).
+  - ```ecp5/``` - Support package for Lattice ECP5 series.
+    - ```constraints.lpf``` - TIming and port constraint file.
+    - ```Makefile``` - Build script for the project.
+    - ```microarch_synth.ys``` - Synthesis script for yosys.
+    - ```top.v``` - File with the top module dedicated to ECP5 FPGAs (mostly includes clock divider).
+    - ```README.md``` - Instructions on how generate the bitstream for the ECP5 series FPGA, and program an ULX3S board.
 
 ##### Building and running the testbench
 
@@ -49,6 +57,7 @@
 - ```make```
 - ```GTKWave FlatPak package```
 - ```g++ compiler```
+- ```yosys```
 
 ###### Cleaning the build directory:
 
@@ -56,7 +65,7 @@ If something does not work, try a clean build by running ```make clean```
 
 Note: this will delete all trace files from ```tracedump/```
 
-###### Running the main simulation:
+###### Running the main functional simulation:
 
 Main simulation is running the microcontroller in Verilator (programmed with the provided hex file).
 
@@ -82,7 +91,15 @@ Hex program file format (each 3-byte instruction is written in a new line, start
 
 After the simulation completes, a ```GTKWave``` window will open (displaying traces, ie. a timeline of value changes on all signals of the design).  Note: To see the traces you need to select the module from a drop-down menu on the left and then select signals by double-clicking them.
 
+###### Running the post-synthesis simulation:
 
+Simulating the microcontroller, programmed with ```executables/peripheal_test.hex``` binary. To swap the binary change the path in ```post_synthesis_sim.ys```.
+
+To run simulation, run:
+
+```make sim```
+
+After the simulation completes, a ```GTKWave``` window will open (displaying traces, ie. a timeline of value changes on all signals of the design).  Note: To see the traces you need to select the module from a drop-down menu on the left and then select signals by double-clicking them.
 
 ###### Running unit tests:
 
