@@ -11,7 +11,7 @@ module alu
     input clk
   );
 
-  reg [2:0] _control;
+  reg [2:0] _control = 3'b000;
   reg [7:0] alpha;
   reg [7:0] beta;
   reg [7:0] immediate;
@@ -44,7 +44,7 @@ module alu
     if(_control == 3'b111) begin
       out <= difference[7:0];
       cf <= difference[8];
-      zf <= !| difference[7:0];
+      zf <= !(|difference[7:0]);
     end
     if(_control == 3'b000) begin
       out <= nand_result;

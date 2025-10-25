@@ -18,7 +18,7 @@ module data_memory
   assign current_control_signal[1] = read_signal;
   assign current_control_signal[0] = write_signal;
 
-  reg[17:0] last_control_signal;
+  reg[17:0] last_control_signal = 18'b000000000000000000;
 
 
   always @(posedge clk)
@@ -36,7 +36,7 @@ module data_memory
   // if the address and operation type has not
   // changed since the last operation.
   // For writes we also check the written data.
-  assign ready = (!|(current_control_signal ^ last_control_signal));
+  assign ready = (!(|(current_control_signal ^ last_control_signal)));
 
 
 endmodule

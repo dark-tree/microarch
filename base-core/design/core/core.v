@@ -34,6 +34,7 @@ module core
   wire cf;
 
 
+
   alu a (
     .in_a(register_bus_a),
     .in_b(register_bus_b),
@@ -73,8 +74,12 @@ module core
 
   parameter IO_MEMORY_SPACE_SIZE=3;
 
-  wire [7:0] io_registers_read[0:IO_MEMORY_SPACE_SIZE-1];
-  wire [7:0] io_registers_write[0:IO_MEMORY_SPACE_SIZE-1];
+  wire [7:0] io_registers_read_bus;
+  wire [7:0] io_registers_write_bus;
+  wire io_registers_write;
+  wire io_registers_read;
+  wire io_registers_ready;
+  wire [3:0] io_registers_address;
 
   mmu #(IO_MEMORY_SPACE_SIZE) m (
     .write(mmu_write),
@@ -95,15 +100,25 @@ module core
     .operation_ongoing(mmu_operation_ongoing),
     .io_registers_write(io_registers_write),
     .io_registers_read(io_registers_read),
+    .io_registers_ready(io_registers_ready),
+    .io_registers_read_bus(io_registers_read_bus),
+    .io_registers_write_bus(io_registers_write_bus),
+    .io_registers_address(io_registers_address),
     .clk(clk)
   );
+
 
   peripheal_control #(IO_MEMORY_SPACE_SIZE) pc (
     .gpio_a_read(gpio_a_read),
     .gpio_a_write(gpio_a_write),
     .gpio_a_ctr(gpio_a_ctr),
     .io_registers_write(io_registers_write),
-    .io_registers_read(io_registers_read)
+    .io_registers_read(io_registers_read),
+    .io_registers_ready(io_registers_ready),
+    .io_registers_read_bus(io_registers_read_bus),
+    .io_registers_write_bus(io_registers_write_bus),
+    .io_registers_address(io_registers_address),
+    .clk(clk)
   );
 
   cu c (

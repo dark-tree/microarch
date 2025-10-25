@@ -1,22 +1,4 @@
 
-module register_output_addressing_unit
-  (
-    input[7:0] register_values[7:0],
-    input[7:0] regmask,
-    output[7:0] out
-  );
-
-  wire [7:0] _out [7:0];
-
-  genvar i;
-  generate
-    for(i=0; i<8;i=i+1) begin
-      assign _out[i] = (regmask[i] == 1'b1) ? register_values[i] : 8'b00000000;
-    end
-  endgenerate
-  assign out = _out[0] | _out[1] | _out[2] | _out[3] | _out[4] | _out[5] | _out[6] | _out[7];
-
-endmodule
 
 
 module register_bank
@@ -34,33 +16,54 @@ module register_bank
 
   reg[7:0] registers[7:0];
 
-  integer i;
+  integer j;
 
   initial begin
-    for(i=0;i<8;i=i+1) begin
-      registers[i] = 8'b00000000;
+    for(j=0;j<8;j=j+1) begin
+      registers[j] = 8'b00000000;
     end
   end
 
-  register_output_addressing_unit roau_a (
-    .register_values(registers),
-    .regmask(o_regmask_a),
-    .out(o_bus_a)
-  );
+  wire [7:0] _out_a [7:0];
+  wire [7:0] _out_b [7:0];
 
-  register_output_addressing_unit roau_b (
-    .register_values(registers),
-    .regmask(o_regmask_b),
-    .out(o_bus_b)
-  );
+  genvar i;
+  generate
+    for(i=0; i<8;i=i+1) begin
+      assign _out_a[i] = (o_regmask_a[i] == 1'b1) ? registers[i] : 8'b00000000;
+      assign _out_b[i] = (o_regmask_b[i] == 1'b1) ? registers[i] : 8'b00000000;
+    end
+  endgenerate
+
+  assign o_bus_a = _out_a[0] | _out_a[1] | _out_a[2] | _out_a[3] | _out_a[4] | _out_a[5] | _out_a[6] | _out_a[7];
+  assign o_bus_b = _out_b[0] | _out_b[1] | _out_b[2] | _out_b[3] | _out_b[4] | _out_b[5] | _out_b[6] | _out_b[7];
 
   always @(posedge clk)
   begin
     if(setter == 1'b1) begin
-      for(i = 0; i<8;i=i+1) begin
-        if(i_regmask[i] == 1'b1) begin
-          registers[i] <= i_bus;
-        end
+      if(i_regmask[0] == 1'b1) begin
+        registers[0] <= i_bus;
+      end
+      if(i_regmask[1] == 1'b1) begin
+        registers[1] <= i_bus;
+      end
+      if(i_regmask[2] == 1'b1) begin
+        registers[2] <= i_bus;
+      end
+      if(i_regmask[3] == 1'b1) begin
+        registers[3] <= i_bus;
+      end
+      if(i_regmask[4] == 1'b1) begin
+        registers[4] <= i_bus;
+      end
+      if(i_regmask[5] == 1'b1) begin
+        registers[5] <= i_bus;
+      end
+      if(i_regmask[6] == 1'b1) begin
+        registers[6] <= i_bus;
+      end
+      if(i_regmask[7] == 1'b1) begin
+        registers[7] <= i_bus;
       end
     end
     if(trigger_cid == 1'b1) begin
