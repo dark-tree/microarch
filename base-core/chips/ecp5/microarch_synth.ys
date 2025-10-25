@@ -1,0 +1,22 @@
+# Parsing platform-specific top module file
+read_verilog top.v
+
+# Parsing design files
+read_verilog ../../design/microcontroller.v
+read_verilog ../../design/core/alu.v
+read_verilog ../../design/core/core.v
+read_verilog ../../design/core/mmu.v
+read_verilog ../../design/core/peripheal_control.v
+read_verilog ../../design/core/register_bank.v
+read_verilog ../../design/core/cu/pipeline.v
+read_verilog ../../design/core/cu/id_stage_3.v
+read_verilog ../../design/core/cu/id_stage_2.v
+read_verilog ../../design/core/cu/id_stage_1.v
+read_verilog ../../design/core/cu/cu.v
+read_verilog ../../design/data_memory/basic_synchronized_ram.v
+read_verilog ../../design/program_memory/basic_async_rom.v
+# Programming the microcontroller (EDIT THIS PATH TO USE A DIFFERENT PROGRAM)
+chparam -set PROGRAM_HEX_FILE "../../executables/peripheal_test.hex" top
+
+# Synthesizing design
+synth_ecp5 -json build/microarch.json
