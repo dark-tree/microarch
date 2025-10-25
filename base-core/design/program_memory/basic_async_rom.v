@@ -1,6 +1,6 @@
 module program_memory
   #(
-    parameter PROGRAM_HEX_FILE
+    parameter PROGRAM_HEX_FILE=""
   )
   (
     output [23:0] output_bus,
@@ -26,4 +26,4 @@ module program_memory
   assign output_bus = data[act_address[14:0]];
 
 
-endmodule;
+endmodule

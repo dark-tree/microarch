@@ -10,6 +10,7 @@ module pipeline
     input stage_1_ready,
     input stage_1_finished,
     input stage_2_finished,
+	input reset_first_instruction,
     input clk
 
   );
@@ -32,6 +33,11 @@ module pipeline
     if(advance_stage_1 == 1'b1) begin
       stage_1_instruction <= stage_1_input;
     end
+	if(reset_first_instruction == 1'b1) begin
+		stage_3_instruction <= 24'b000000000000000000000000;
+		stage_2_instruction <= 24'b000000000000000000000000;
+		stage_1_instruction <= 24'b000000000000000000000000;
+	end
   end
 
 endmodule

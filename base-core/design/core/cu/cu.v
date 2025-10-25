@@ -29,7 +29,7 @@ module cu
 
   );
 
-  wire interrupt_signal = interrupt_signal_staging & ctr[4];
+
 
   wire[23:0] instruction_s1;
   wire[23:0] instruction_s2;
@@ -48,7 +48,7 @@ module cu
 
   wire flag_overlap_warning = stage_2_setting_flags & stage_1_using_flags;
 
-  wire stage_1_hold = flag_overlap_warning | register_overlap_warning;
+  wire stage_1_hold = flag_overlap_warning | register_overlap_warning | cpu_stopped;
 
   wire execute_stage_1 = !stage_1_hold;
   wire stage_1_finished;
@@ -66,6 +66,10 @@ module cu
   wire[7:0] ctr_mask;
   wire[7:0] ctr_mask_negated = ~ctr_mask;
 
+  wire[7:0] ctr_candidate = (ctr & ctr_mask_negated) | (ctr_value & ctr_mask);
+
+  wire interrupt_signal = ctr[4] & interrupt_signal_staging;
+
   always @(posedge clk)
   begin
     if(ready_for_next_instruction == 1'b1) begin
@@ -74,13 +78,14 @@ module cu
       end
     end
     if(set_ctr == 1'b1) begin
-      ctr <= (ctr & ctr_mask_negated) | (ctr_value & ctr_mask);
+      ctr <= ctr_candidate;
     end
-    if(interrupt_signal) begin
-      ctr[7:5] <= 3'b000;
-    end
+	if(interrupt_signal == 1'b1) begin
+	  ctr[7:5] <= 3'b000;
+	end
   end
 
+  wire cpu_stopped = |ctr[7:5];
 
   pipeline p (
     .stage_1_instruction(instruction_s1),
@@ -93,6 +98,7 @@ module cu
     .stage_1_finished(stage_1_finished),
     .stage_2_finished(stage_2_finished),
     .ready_for_next_instruction(ready_for_next_instruction),
+	 .reset_first_instruction(cpu_stopped),
     .clk(clk)
   );
 
