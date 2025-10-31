@@ -4,6 +4,9 @@
 #include <source/tokenizer.hpp>
 
 #include "vstl.hpp"
+#include "asm/x86/writer.hpp"
+#include "out/buffer/segmented.hpp"
+#include "out/elf/buffer.hpp"
 
 TEST(tokenize_mixed) {
 
@@ -260,5 +263,21 @@ TEST(assembler_if_block) {
 	CHECK(bytes[6*3] & 0xF, 0b1011);
 	CHECK(bytes[7*3] & 0xF, 0b0000);
 	CHECK(bytes[8*3] & 0xF, 0b1111);
+
+};
+
+TEST (asmiov_sanity_check) {
+
+	using namespace asmio;
+	using namespace asmio::x86;
+
+	SegmentedBuffer buffer;
+	BufferWriter writer {buffer};
+
+	writer.put_mov(RAX, ref(EAX + EBX * 2 + 123));
+	writer.put_mov(EAX, ref(RAX + RBX * 2 + 123));
+
+	EXPECT_ANY() { writer.put_mov(RAX, ref(RAX + EBX * 2 + 123)); };
+	EXPECT_ANY() { writer.put_mov(RAX, ref(EAX + RBX * 2 + 123)); };
 
 };

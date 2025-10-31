@@ -61,8 +61,8 @@ class MicroWriter {
 		enum Cond : uint8_t {
 			F   = 0,
 			T   = CF_IGNORE | ZF_IGNORE,
-			NBA = ZF_FALSE | CF_FALSE,
-			A   = NBA,
+			NBE = ZF_FALSE | CF_FALSE,
+			A   = NBE,
 			NC  = CF_FALSE | ZF_IGNORE,
 			NB  = NC,
 			AE  = NC,
