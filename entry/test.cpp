@@ -1,5 +1,7 @@
 
 #include <assembler.hpp>
+#include <reader/reader.hpp>
+#include <reader/state.hpp>
 #include <source/error.hpp>
 #include <source/tokenizer.hpp>
 
@@ -279,5 +281,49 @@ TEST (asmiov_sanity_check) {
 
 	EXPECT_ANY() { writer.put_mov(RAX, ref(RAX + EBX * 2 + 123)); };
 	EXPECT_ANY() { writer.put_mov(RAX, ref(EAX + RBX * 2 + 123)); };
+
+};
+
+TEST(reader_disassemble) {
+
+	MessageSink::clear();
+	MessageSink::printer([&] (const Message& message) {
+		FAIL("Unexpected message! " + std::string(message.what()))
+	});
+
+	SourceUnit unit {R"(
+
+		set $1, 42
+		set $4, 1
+		set $5, 0
+
+		test:
+			nop
+			mov $1, $
+
+		jmp test
+		mov $7, $5
+
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	std::string back = state.disassemble();
+
+	CHECK(back, R"(	set $1, 42
+	set $4, 1
+	set $5, 0
+
+l_9:
+	nop
+	mov $1, $
+	jmp l_9
+	mov $7, $5
+)");
 
 };

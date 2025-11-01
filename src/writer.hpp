@@ -10,6 +10,13 @@ class MicroWriter {
 		/// Removes the previous condition that was applied with pushCondition()
 		void popCondition();
 
+		struct Link {
+			uint32_t label;  // the unique label identifier
+			uint32_t offset; // byte offset from the start of the buffer
+		};
+
+	public:
+
 		// instruction flag parts
 		static constexpr uint8_t ZF_TRUE = 0b1000;
 		static constexpr uint8_t ZF_FALSE = 0b0100;
@@ -35,11 +42,6 @@ class MicroWriter {
 		static constexpr uint8_t OP_EXT = 0b1101; // unused, reserved for future use
 		static constexpr uint8_t OP_ADD = 0b1110;
 		static constexpr uint8_t OP_CMP = 0b1111;
-
-		struct Link {
-			uint32_t label;  // the unique label identifier
-			uint32_t offset; // byte offset from the start of the buffer
-		};
 
 	public:
 
