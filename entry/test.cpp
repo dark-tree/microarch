@@ -5,6 +5,8 @@
 #include <source/error.hpp>
 #include <source/tokenizer.hpp>
 
+#define VSTL_TRIGGER_DEBUGGER false
+
 #include "vstl.hpp"
 #include "asm/x86/writer.hpp"
 #include "out/buffer/segmented.hpp"
@@ -157,7 +159,7 @@ TEST(assembler_labels) {
 
 	CHECK(bytes[12], 0b0101'1011);
 	CHECK(bytes[13], 0);
-	CHECK(bytes[14], 6);
+	CHECK(bytes[14], 2);
 
 };
 
@@ -319,11 +321,105 @@ TEST(reader_disassemble) {
 	set $4, 1
 	set $5, 0
 
-l_9:
+l_3:
 	nop
 	mov $1, $
-	jmp l_9
+	jmp l_3
 	mov $7, $5
 )");
 
+};
+
+TEST(interpreter_all_instructions) {
+	SourceUnit unit {R"(
+
+		set $01, 42
+		set $23, 19
+		set $45, 7
+		set $67, 213
+		add $0, $1
+		nop
+		cmp $7, $4
+		mov $7, $6
+		stm $6, $2
+		ldm $0, $6
+		nad $2, $3
+		and $4, $5
+		xor $4, $5
+		shr $1, 2
+		cid 0
+		set $0, 255
+		ctr $0, 7
+		set $0, 98
+		set $1, 213
+		jmp $0, $1
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	state.run(4);
+	CHECK(state.regs[0], 42);
+	state.run(1);
+	CHECK(state.regs[0], 84);
+	state.run(2);
+	CHECK(state.regs[7], 206);
+	state.run(1);
+	CHECK(state.regs[7], 213);
+	state.run(2);
+	CHECK(state.regs[0], 19);
+	state.run(1);
+	CHECK(state.regs[2], 236);
+	state.run(1);
+	CHECK(state.regs[4], 7);
+	state.run(1);
+	CHECK(state.regs[4], 0);
+	state.run(1);
+	CHECK(state.regs[1], 10);
+	state.run(1);
+	CHECK(state.regs[0], 0);
+	CHECK(state.regs[1], 0);
+	CHECK(state.regs[2], 0);
+	CHECK(state.regs[3], 0);
+	state.run(2);
+	CHECK(state.ctr.flags.reserved, 7);
+	CHECK(state.ctr.flags.standby_mode, 0);
+	CHECK(state.ctr.flags.interrupt, 0);
+	state.run(3);
+	CHECK(state.pc, 25301);
+};
+
+TEST(interpreter_fibonacci) {
+
+	SourceUnit unit {R"(
+
+		set $0, 10
+		set $1, 1
+		ptl:
+			nop
+		cmp $0, $1
+		nz.jmp ptl
+		set $7, 98
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	state.run(2);
+	for (int i=10; i>0; i--) {
+		CHECK(state.regs[0], i);
+		state.run(3);
+	}
+	state.run(1);
+	CHECK(state.regs[7], 98);
 };
