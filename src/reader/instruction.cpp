@@ -32,7 +32,8 @@ std::string MicroInst::regset(uint8_t regset) const {
 }
 
 bool MicroInst::checkFlags(const CoreState& state) const {
-	return condition & state.getFlagMask();
+	uint8_t fdf =  condition & state.getFlagMask();
+	return (fdf & MicroWriter::CF_IGNORE) && (fdf & MicroWriter::ZF_IGNORE);
 }
 
 MicroInst::~MicroInst() {

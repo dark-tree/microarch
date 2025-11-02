@@ -91,8 +91,8 @@ void MicroWriter::putCid(uint8_t page) {
  *
  * @param flags Flags to write to the internal control register
  */
-void MicroWriter::putCtr(uint8_t flags) {
-	putOp(OP_CID, flags, 0);
+void MicroWriter::putCtr(uint8_t flagRegset, uint8_t bitmask) {
+	putOp(OP_CTR, flagRegset, bitmask);
 }
 
 /**
@@ -134,7 +134,7 @@ void MicroWriter::putXor(uint8_t brs, uint8_t irs) {
  * implementation is allowed to not support offsets larger than 1.
  *
  * @param brs Input/Output registry set
- * @param irs Input registry set
+ * @param irs Input imediate value
  */
 void MicroWriter::putShr(uint8_t brs, uint8_t irs) {
 	putOp(OP_SHR, brs, irs);
@@ -201,7 +201,7 @@ std::vector<uint8_t> MicroWriter::bake() {
 	std::vector<uint8_t> result = bytes;
 
 	for (auto& link : links) {
-		uint16_t target = labels.at(link.label) & 0xFFFF;
+		uint16_t target = (labels.at(link.label) & 0xFFFF)/3; // Dividing by 3, because in microarch each program memory cell has 3 bytes
 		uint32_t offset = link.offset;
 
 		if (result.size() - 1 <= offset) {

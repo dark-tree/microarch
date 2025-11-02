@@ -153,7 +153,7 @@ class MicroWriter {
 		 *
 		 * @param flags Flags to write to the internal control register
 		 */
-		void putCtr(uint8_t flags);
+		void putCtr(uint8_t flagRegset, uint8_t bitmask);
 
 		/**
 		 * Read values from both input registry sets (Argument 1 & 2) bitwise NAND them

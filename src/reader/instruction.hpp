@@ -196,7 +196,7 @@ struct InstCtr : MicroInst {
 
 	void apply(CoreState& state) override {
 		if (!checkFlags(state)) return;
-		throw std::runtime_error {"CTR unimplemented - No idea what this even does anymore"};
+		state.ctr.raw_byte = (state.read(a) & b) | (state.ctr.raw_byte & (!b));
 	}
 
 	std::string string() override {
@@ -213,7 +213,7 @@ struct InstCid : MicroInst {
 
 	void apply(CoreState& state) override {
 		if (!checkFlags(state)) return;
-		throw std::runtime_error {"CID unimplemented - No idea what this even does anymore"};
+		state.write(0b00001111, 0);
 	}
 
 	std::string string() override {
@@ -330,3 +330,4 @@ struct InstNop : MicroInst {
 	}
 
 };
+

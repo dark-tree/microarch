@@ -190,7 +190,7 @@ void Tokenizer::scanRegisterSet(Lexer& lexer, Token::Stream& sink) {
 
 		char chr = lexer.peek();
 
-		if (chr >= '0' && chr <= '9') {
+		if (chr >= '0' && chr <= '7') {
 			if (chr <= previous) {
 				SourceSpan span = lexer.prevSpan();
 

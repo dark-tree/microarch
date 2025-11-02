@@ -62,13 +62,16 @@ std::string CoreState::disassemble() {
 	return str;
 }
 
-void CoreState::run() {
-
-	// TODO check core's halt flag
-	while (true) {
-		rom[pc]->apply(*this);
+void CoreState::run(size_t count) {
+	ctr.flags.standby_mode = 0;
+	for (int i=0; i<count; i++) {
+		if (ctr.flags.standby_mode) {
+			break;
+		}
+		uint16_t current_instruction = pc;
+		pc += 1;
+		rom[current_instruction]->apply(*this);
 	}
-
 }
 
 asmio::ExecutableBuffer CoreState::jit() {
