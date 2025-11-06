@@ -177,7 +177,7 @@ int sc_main(int argc, char* argv[]) {
 		for(int i = 0; i<2000;i++)
 		{
 
-				if(i > 400 && i< 420)
+				if(i > 700 && i< 720)
 				{
 						interrupt_signal = true;
 				}
