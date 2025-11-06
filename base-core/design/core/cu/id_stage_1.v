@@ -20,9 +20,6 @@ module id_stage_1
     output flag_dependent,
     output mmu_write,
     output mmu_execute,
-    input interrupt_signal,
-    output set_interrupt_return_address,
-    output[15:0] interrupt_return_address,
     output instruction_finished
   );
 
@@ -37,8 +34,6 @@ module id_stage_1
 
   assign mmu_write = instruction[20];
   wire  staging_mmu_execute = (instruction[23:21] == 3'b001) ? 1'b1 : 1'b0;
-
-  assign set_interrupt_return_address = interrupt_signal;
 
   wire[15:0] address_from_registers;
   assign address_from_registers[7:0] = register_bus_b;
@@ -64,10 +59,7 @@ module id_stage_1
   assign mmu_execute = actually_execute & staging_mmu_execute;
   assign set_ctr = actually_execute & staging_set_ctr;
 
-
-  wire[15:0] next_address_staging = ((actually_execute == 1'b1) & (instruction[23:21] == 3'b010)) ? jump_address : (current_instruction_address + 3);
-  assign interrupt_return_address = next_address_staging;
-  assign next_instruction_address = (interrupt_signal == 1'b1) ? 16'b0000000000000000 : next_address_staging;
+  assign next_instruction_address = ((actually_execute == 1'b1) & (instruction[23:21] == 3'b010)) ? jump_address : (current_instruction_address + 1);
 
   assign instruction_finished = ((instruction[23:21] == 3'b010) | (instruction[23:20] == 4'b0111)) | ( !actually_execute | (instruction[23:20] == 4'b0000));
 
