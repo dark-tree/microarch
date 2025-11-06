@@ -7,9 +7,6 @@ class MicroWriter {
 
 	private:
 
-		/// Removes the previous condition that was applied with pushCondition()
-		void popCondition();
-
 		struct Link {
 			uint32_t label;  // the unique label identifier
 			uint32_t offset; // byte offset from the start of the buffer
@@ -44,6 +41,9 @@ class MicroWriter {
 		static constexpr uint8_t OP_CMP = 0b1111;
 
 	public:
+
+		/// Removes the previous condition that was applied with pushCondition()
+		void popCondition();
 
 		struct ConditionScopeGuard {
 			MicroWriter* writer;

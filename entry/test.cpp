@@ -1,5 +1,6 @@
 
 #include <assembler.hpp>
+#include <controller.hpp>
 #include <reader/reader.hpp>
 #include <reader/state.hpp>
 #include <source/error.hpp>
@@ -328,6 +329,21 @@ l_3:
 	mov $7, $5
 )");
 
+};
+
+TEST(controller_hex_input) {
+	auto bytes = decodeHexString("AF2234\n778865\n\r1244AF\nEABCDA\t");
+
+	CHECK(bytes[0], 0xAF);
+	CHECK(bytes[1], 0x22);
+	CHECK(bytes[2], 0x34);
+	CHECK(bytes[3], 0x77);
+	CHECK(bytes[4], 0x88);
+	CHECK(bytes[5], 0x65);
+	CHECK(bytes[6], 0x12);
+	CHECK(bytes[7], 0x44);
+	CHECK(bytes[8], 0xAF);
+	CHECK(bytes[9], 0xEA);
 };
 
 TEST(interpreter_all_instructions) {

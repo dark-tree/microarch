@@ -15,7 +15,7 @@ FetchContent_Declare(
 FetchContent_Declare(
 		asmiov
 		GIT_REPOSITORY https://github.com/dark-tree/asmiov
-		GIT_TAG ec4c44fc2d100bc52a629d3bd8424008140d5673
+		GIT_TAG 3d9be3739f86814003bf2072f3a75b374b5a42d0
 )
 
 FetchContent_MakeAvailable(vstl asmiov)
@@ -38,7 +38,7 @@ target_link_libraries(microarch_test PRIVATE
 		asmiov
 )
 
-target_include_directories(microarch_test PRIVATE
+target_include_directories(microarch_common INTERFACE
 		${vstl_SOURCE_DIR}
 		${asmiov_SOURCE_DIR}/src
 )
@@ -93,6 +93,7 @@ add_executable(microarch
 
 target_link_libraries(microarch PRIVATE
 		microarch_common
+		asmiov
 )
 
 install(TARGETS microarch)
