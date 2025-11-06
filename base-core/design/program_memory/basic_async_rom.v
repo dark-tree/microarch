@@ -9,7 +9,7 @@ module program_memory
     output instruction_ready
   );
 
-  reg [23:0] data[0:21844];
+  reg [23:0] data[0:40000];
 
   initial begin
     if(PROGRAM_HEX_FILE=="") begin
@@ -19,11 +19,9 @@ module program_memory
     end
   end
 
-  wire[15:0] act_address = address/3;
-
   assign instruction_ready = 1'b1;
 
-  assign output_bus = data[act_address[14:0]];
+  assign output_bus = data[address];
 
 
 endmodule

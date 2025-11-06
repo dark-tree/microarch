@@ -58,7 +58,7 @@ module cu
 
   wire ready_for_next_instruction;
 
-  reg[15:0] pc = 16'b1111111111111101;
+  reg[15:0] pc = 16'b1111111111111111;
   reg[7:0] ctr = 8'b00000000;
 
   wire set_ctr;
@@ -69,6 +69,9 @@ module cu
   wire[7:0] ctr_candidate = (ctr & ctr_mask_negated) | (ctr_value & ctr_mask);
 
   wire interrupt_signal = ctr[4] & interrupt_signal_staging;
+
+  assign set_interrupt_return_address = interrupt_signal;
+  assign interrupt_return_address = program_counter;
 
   always @(posedge clk)
   begin
@@ -81,7 +84,8 @@ module cu
       ctr <= ctr_candidate;
     end
 	if(interrupt_signal == 1'b1) begin
-	  ctr[7:5] <= 3'b000;
+	  ctr[7:4] <= 4'b0000;
+    pc <= 16'b0000000000000001;
 	end
   end
 
@@ -120,9 +124,6 @@ module cu
     .next_instruction_address(program_counter),
     .mmu_write(mmu_write),
     .mmu_execute(mmu_signal),
-    .interrupt_signal(interrupt_signal),
-    .set_interrupt_return_address(set_interrupt_return_address),
-    .interrupt_return_address(interrupt_return_address),
     .instruction_finished(stage_1_finished),
     .flag_dependent(stage_1_using_flags),
     .set_ctr(set_ctr),
