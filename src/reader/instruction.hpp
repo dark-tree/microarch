@@ -5,7 +5,11 @@
 
 #include "labler.hpp"
 #include "state.hpp"
+#include "asm/x86/writer.hpp"
 #include "out/buffer/segmented.hpp"
+
+using namespace asmio;
+using namespace asmio::x86;
 
 class MicroInst {
 
@@ -19,6 +23,71 @@ class MicroInst {
 
 		/// Check if this instruction should execute
 		bool checkFlags(const CoreState& state) const;
+
+		static void jitComputeRegistrySet(BufferWriter& writer, Registry output, uint8_t registrySet) {
+			bool firstMoved = false;
+			for (unsigned int i = 0; i<CoreState::REGISTER_COUNT; i++) {
+				if (registrySet % 2) {
+					if (!firstMoved) {
+						writer.put_mov(output, CoreState::REGISTRY_MAPPING[i]);
+						firstMoved = true;
+					} else {
+						writer.put_or(output, CoreState::REGISTRY_MAPPING[i]);
+					}
+				}
+				registrySet = registrySet >> 1;
+			}
+		}
+
+		static void jitWriteToRegistrySet(BufferWriter& writer, Location input, uint8_t registrySet) {
+			for (unsigned int i = 0; i<CoreState::REGISTER_COUNT; i++) {
+				if (registrySet % 2) {
+					writer.put_mov( CoreState::REGISTRY_MAPPING[i], input);
+				}
+				registrySet = registrySet >> 1;
+			}
+		}
+
+		typedef void(BufferWriter::*TwoArgumentJITInstruction)(Location, Location);
+
+		void jitApplyInstructionOnRegistrySets(BufferWriter& writer, TwoArgumentJITInstruction instruction) const {
+			jitComputeRegistrySet(writer, DL, a);
+			jitComputeRegistrySet(writer, BL, b);
+			(writer.*instruction)(DL, BL);
+			jitWriteToRegistrySet(writer, DL, a);
+		}
+
+		Label jitInsertConditionalJumpIfNeeded(BufferWriter& writer) const{
+			if (condition == MicroWriter::T) {
+				return {};
+			}
+			auto label = Label::make_unique();
+			if (condition == MicroWriter::F) {
+				writer.put_jmp(label);
+			}
+			else {
+				static std::unordered_map <MicroWriter::Cond, void(BufferWriter::*)(Location)> JUMP_CONDITION_MAPPING ={
+					{MicroWriter::Cond::NBE, &BufferWriter::put_jbe},
+					{MicroWriter::Cond::NC, &BufferWriter::put_jc},
+					{MicroWriter::Cond::C, &BufferWriter::put_jnc},
+					{MicroWriter::Cond::NE, &BufferWriter::put_je},
+					{MicroWriter::Cond::E, &BufferWriter::put_jne},
+				};
+				writer.put_push(SI);
+				writer.put_popf();
+				auto func = JUMP_CONDITION_MAPPING.at(condition);
+				(writer.*func)(label);
+			}
+			return label;
+		}
+
+		void jitConditionalExecute(BufferWriter& writer, std::function<void()>&& operation) {
+			auto label = jitInsertConditionalJumpIfNeeded(writer);
+			operation();
+			if (!label.empty()) {
+				writer.label(label);
+			}
+		}
 
 	public:
 
@@ -56,7 +125,7 @@ class MicroInst {
 		 * Append this instruction to the JIT buffer as native instructions,
 		 * using this method on a series of instructions generates a JIT application.
 		 */
-		virtual void jit(asmio::SegmentedBuffer& buffer) { /* TODO, for now do nothing */ }
+		virtual void jit(BufferWriter& writer){};
 
 };
 
@@ -84,6 +153,16 @@ struct InstCmp : MicroInst {
 		return prefix() + "cmp " + regset(a) + ", " + regset(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, DL, a);
+			jitComputeRegistrySet(writer, BL, b);
+			writer.put_sub(DL, BL);
+			writer.put_pushf();
+			writer.put_pop(SI);
+			jitWriteToRegistrySet(writer, DL, a);
+		});
+	}
 };
 
 struct InstAdd : MicroInst {
@@ -99,6 +178,12 @@ struct InstAdd : MicroInst {
 
 	std::string string() override {
 		return prefix() + "add " + regset(a) + ", " + regset(b);
+	}
+
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitApplyInstructionOnRegistrySets(writer, &BufferWriter::put_add);
+		});
 	}
 
 };
@@ -118,6 +203,13 @@ struct InstMov : MicroInst {
 		return prefix() + "mov " + regset(a) + ", " + regset(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, BL, b);
+			jitWriteToRegistrySet(writer, BL, a);
+		});
+	}
+
 };
 
 struct InstShr : MicroInst {
@@ -133,6 +225,14 @@ struct InstShr : MicroInst {
 
 	std::string string() override {
 		return prefix() + "shr " + regset(a) + ", " + std::to_string(b);
+	}
+
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, BL, a);
+			writer.put_shr(BL, b);
+			jitWriteToRegistrySet(writer, BL, a);
+		});
 	}
 
 };
@@ -152,6 +252,11 @@ struct InstXor : MicroInst {
 		return prefix() + "xor " + regset(a) + ", " + regset(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitApplyInstructionOnRegistrySets(writer, &BufferWriter::put_xor);
+		});
+	}
 };
 
 struct InstAnd : MicroInst {
@@ -169,6 +274,11 @@ struct InstAnd : MicroInst {
 		return prefix() + "and " + regset(a) + ", " + regset(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitApplyInstructionOnRegistrySets(writer, &BufferWriter::put_and);
+		});
+	}
 };
 
 struct InstNad : MicroInst {
@@ -186,6 +296,15 @@ struct InstNad : MicroInst {
 		return prefix() + "nad " + regset(a) + ", " + regset(b);
 	}
 
+		void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, DL, a);
+			jitComputeRegistrySet(writer, BL, b);
+			writer.put_and(DL, BL);
+			writer.put_neg(DL);
+			jitWriteToRegistrySet(writer, DL, a);
+		});
+	}
 };
 
 struct InstCtr : MicroInst {
@@ -203,9 +322,28 @@ struct InstCtr : MicroInst {
 		return prefix() + "ctr " + std::to_string(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+
+			jitComputeRegistrySet(writer, DL, a);
+			writer.put_mov(AL, b);
+			writer.put_and(DL, AL);
+			writer.put_mov(AL, ~b);
+			writer.put_and(CL, AL);
+			writer.put_or(CL, DL);
+			writer.put_movzx(RDI, CL);
+			writer.put_shr(RDI, 5);
+			// Saving code resume point
+			writer.put_mov(ref<WORD>(CoreState::PROGRAM_COUNTER), address+1);
+			// Stopping the execution
+			writer.put_jnz(CoreState::CLEANUP_CODE);
+		});
+	}
 };
 
 struct InstCid : MicroInst {
+
+	static const uint8_t cidRegistrySet = 0b00001111;
 
 	InstCid(uint16_t address, MicroWriter::Cond condition, uint8_t a, uint8_t b)
 		: MicroInst(address, condition, a, b) {
@@ -213,11 +351,17 @@ struct InstCid : MicroInst {
 
 	void apply(CoreState& state) override {
 		if (!checkFlags(state)) return;
-		state.write(0b00001111, 0);
+		state.write(cidRegistrySet, 0);
 	}
 
 	std::string string() override {
 		return prefix() + "cid " + std::to_string(b);
+	}
+
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitWriteToRegistrySet(writer, 0, cidRegistrySet);
+		});
 	}
 
 };
@@ -241,6 +385,16 @@ struct InstJpi : MicroInst {
 		return prefix() + "jmp l_" + std::to_string(a << 8 | b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			uint16_t offset = (a << 8) | b;
+			writer.put_mov(RDX, ref<QWORD>(Location(CoreState::INSTRUCTION_OFFSETS) + 8*offset));
+			writer.put_lea(RAX, CoreState::PROGRAM_MEMORY);
+			writer.put_add(RAX, RDX);
+			writer.put_jmp(RAX);
+		});
+	}
+
 };
 
 struct InstJpr : MicroInst {
@@ -258,6 +412,19 @@ struct InstJpr : MicroInst {
 		return prefix() + "jmp " + regset(a) + ", " + regset(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, DL, a);
+			jitComputeRegistrySet(writer, BL, b);
+			writer.put_mov(BH, DL);
+			writer.put_movzx(RBX, BX);
+			writer.put_lea(RAX, CoreState::INSTRUCTION_OFFSETS);
+			writer.put_mov(RDX, ref<QWORD>( RAX + RBX*8));
+			writer.put_lea(RAX, CoreState::PROGRAM_MEMORY);
+			writer.put_add(RAX, RDX);
+			writer.put_jmp(RAX);
+		});
+	}
 };
 
 struct InstStm : MicroInst {
@@ -275,6 +442,14 @@ struct InstStm : MicroInst {
 		return prefix() + "stm " + regset(a) + ", " + regset(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, DL, a);
+			jitComputeRegistrySet(writer, BL, b);
+			writer.put_lea(RAX, CoreState::DATA_MEMORY);
+			writer.put_mov(ref(RAX+DL), BL);
+		});
+	}
 };
 
 struct InstLdm : MicroInst {
@@ -292,6 +467,15 @@ struct InstLdm : MicroInst {
 		return prefix() + "ldm " + regset(a) + ", " + regset(b);
 	}
 
+
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitComputeRegistrySet(writer, BL, b);
+			writer.put_lea(RAX, CoreState::DATA_MEMORY);
+			writer.put_mov(DL, ref(RAX+BL));
+			jitWriteToRegistrySet(writer, DL, a);
+		});
+	}
 };
 
 struct InstSet : MicroInst {
@@ -309,6 +493,11 @@ struct InstSet : MicroInst {
 		return prefix() + "set " + regset(a) + ", " + std::to_string(b);
 	}
 
+	void jit(BufferWriter& writer) override {
+		jitConditionalExecute(writer, [&writer, this]() {
+			jitWriteToRegistrySet(writer, b, a);
+		});
+	}
 };
 
 struct InstNop : MicroInst {
@@ -325,8 +514,8 @@ struct InstNop : MicroInst {
 		return "nop";
 	}
 
-	void jit(asmio::SegmentedBuffer& buffer) override {
-		// do nothing
+	void jit(BufferWriter& writer) override {
+		writer.put_nop();
 	}
 
 };

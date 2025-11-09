@@ -1,11 +1,51 @@
 #pragma once
 #include <memory>
+#include <utility>
 #include <vector>
 #include <out/buffer/executable.hpp>
-
+#include "asm/x86/argument/registry.hpp"
 class MicroInst;
 
+struct CoreState;
+
+struct ExecutableCore {
+	static constexpr char CODE_START[] = "code";
+
+	CoreState* core;
+	asmio::ExecutableBuffer code;
+	std::function<void()> stopFunction;
+
+	ExecutableCore(CoreState* core, asmio::SegmentedBuffer& codeBuffer, std::function<void()> stopFunction) : core(core), code(asmio::to_executable(codeBuffer)), stopFunction(stopFunction) {
+	}
+
+	void operator()() {
+		code.scall<void>(CODE_START, this);
+	}
+};
+
 struct CoreState {
+
+	// Constants for JIT labels
+	static constexpr char CLEANUP_CODE[] = "exit";
+	static constexpr char PROGRAM_MEMORY[] = "program";
+	static constexpr char DATA_MEMORY[] = "data";
+	static constexpr char REGISTERS[] = "registers";	//Registers are not constantly stored in this memory, but are dumped there at the end of each JIT run.
+	static constexpr char EXECUTABLE_CORE_POINTER[] = "exec_core_ptr";
+	static constexpr char INSTRUCTION_OFFSETS[] = "instruction_offsets";
+	static constexpr char PROGRAM_COUNTER[] = "instruction_to_run";
+	static constexpr char FLAGS[] = "flags";
+	static constexpr unsigned int DATA_MEMORY_SIZE = 256;
+	static constexpr unsigned int REGISTER_COUNT = 8;
+	static constexpr asmio::x86::Registry REGISTRY_MAPPING[] = {
+		asmio::x86::R8L,
+		asmio::x86::R9L,
+		asmio::x86::R10L,
+		asmio::x86::R11L,
+		asmio::x86::R12L,
+		asmio::x86::R13L,
+		asmio::x86::R14L,
+		asmio::x86::R15L,
+	};
 
 	union ControlByte {
 		struct __attribute__((packed)) Flags {
@@ -43,6 +83,7 @@ struct CoreState {
 	void run(size_t count = std::numeric_limits<size_t>::max());
 
 	/// Compile the program into a JIT executable buffer
-	asmio::ExecutableBuffer jit();
+	ExecutableCore jit(std::function<void()> stopFunction = [](){});
 
 };
+
