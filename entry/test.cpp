@@ -57,7 +57,7 @@ TEST(tokenize_mixed) {
 		"nop", ";", "nop", "\n", "\n"
 	};
 
-	for (int i = 0; i < tokens.size(); i++) {
+	for (unsigned int i = 0; i < tokens.size(); i++) {
 		const Token& token = tokens[i];
 
 		if (token.lexeme() != expected[i]) {
@@ -438,4 +438,47 @@ TEST(interpreter_fibonacci) {
 	}
 	state.run(1);
 	CHECK(state.regs[7], 98);
+};
+
+
+
+TEST(jit_fibonacci) {
+
+	SourceUnit unit {R"(
+
+		set $0, 13
+		set $1, 1
+		set $2, 0
+		set $3, 1
+		set $5, 255
+		ptl:
+			ctr $5, 224
+			mov $4, $3
+			add $4, $2
+			mov $2, $3
+			mov $3, $4
+		cmp $0, $1
+		set $6, 0
+		set $7, 5
+		nz.jmp $6, $7
+		ctr $5, 224
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	ExecutableCore core = state.jit();
+
+	uint8_t fibonacci_sequence [] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233};
+
+	for (int i=0;i<14;i++) {
+		core();
+		CHECK(state.regs[2], fibonacci_sequence[i]);
+	}
+
+
 };
