@@ -326,10 +326,8 @@ struct InstCtr : MicroInst {
 		jitConditionalExecute(writer, [&writer, this]() {
 
 			jitComputeRegistrySet(writer, DL, a);
-			writer.put_mov(AL, b);
-			writer.put_and(DL, AL);
-			writer.put_mov(AL, ~b);
-			writer.put_and(CL, AL);
+			writer.put_and(DL, b);
+			writer.put_and(CL, ~b);
 			writer.put_or(CL, DL);
 			writer.put_movzx(RDI, CL);
 			writer.put_shr(RDI, 5);

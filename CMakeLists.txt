@@ -15,7 +15,7 @@ FetchContent_Declare(
 FetchContent_Declare(
 		asmiov
 		GIT_REPOSITORY https://github.com/dark-tree/asmiov
-		GIT_TAG eed29a511afa1b43246664687b7562825c92a235
+		GIT_TAG 63ed6a21ccb47fb8393ba84ba5fd6f3989e596ad
 )
 
 FetchContent_MakeAvailable(vstl asmiov)
