@@ -386,9 +386,7 @@ struct InstJpi : MicroInst {
 	void jit(BufferWriter& writer) override {
 		jitConditionalExecute(writer, [&writer, this]() {
 			uint16_t offset = (a << 8) | b;
-			writer.put_mov(RDX, ref<QWORD>(Location(CoreState::INSTRUCTION_OFFSETS) + 8*offset));
-			writer.put_lea(RAX, CoreState::PROGRAM_MEMORY);
-			writer.put_add(RAX, RDX);
+			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS) + 8*offset);
 			writer.put_jmp(RAX);
 		});
 	}
@@ -416,10 +414,8 @@ struct InstJpr : MicroInst {
 			jitComputeRegistrySet(writer, BL, b);
 			writer.put_mov(BH, DL);
 			writer.put_movzx(RBX, BX);
-			writer.put_lea(RAX, CoreState::INSTRUCTION_OFFSETS);
-			writer.put_mov(RDX, ref<QWORD>( RAX + RBX*8));
-			writer.put_lea(RAX, CoreState::PROGRAM_MEMORY);
-			writer.put_add(RAX, RDX);
+			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS));
+			writer.put_lea(RAX, RAX + RBX*8);
 			writer.put_jmp(RAX);
 		});
 	}

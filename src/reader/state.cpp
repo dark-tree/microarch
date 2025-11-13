@@ -148,20 +148,17 @@ ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
 	// Jumping to the correct microarch instruction
 	writer.put_mov(BX, ref(PROGRAM_COUNTER));
 	writer.put_movzx(RBX, BX);
-	writer.put_lea(RAX, INSTRUCTION_OFFSETS);
-	writer.put_mov(RDX, ref<QWORD>( RAX + RBX*8));
-	writer.put_lea(RAX, PROGRAM_MEMORY);
-	writer.put_add(RAX, RDX);
+	writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS));
+	writer.put_lea(RAX, RAX + RBX*8);
 	writer.put_jmp(RAX);
 
 	writer.label(PROGRAM_MEMORY);
 	auto programStartMarker = buffer.current();
-	std::vector<uint64_t>instructionOffsets;
-	// writer.put_mov(ref<BYTE>(Location(DATA_MEMORY)+13), 93);
-	// writer.put_mov(R8L, 19);
+	std::vector<Label>instructionOffsets;
 	for (auto& inst : rom) {
-		auto instructionMarker = buffer.current();
-		instructionOffsets.push_back(instructionMarker.offset - programStartMarker.offset);
+		auto instructionLabel = Label::make_unique();
+		writer.label(instructionLabel);
+		instructionOffsets.push_back(instructionLabel);
 		inst->jit(writer);
 	}
 
@@ -182,6 +179,17 @@ ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
 	// RET instruction demanded by ASMIOV library spec to return from JIT segment.
 	writer.put_ret();
 
+	// Since every microarch instruction translates to a different number of bytes of x86 code, we use an address map
+	// to be able to jump to proper microarch instructions. To improve performance, instead of storing addresses, we
+	// have a table with jump instructions that jump to those addresses.
+	writer.label(INSTRUCTION_OFFSETS);
+	for (unsigned int i=0;i<instructionOffsets.size();i++) {
+		// Each jump instruction is 5 bytes, we pad it to 8 bytes.
+		writer.put_jmp(instructionOffsets[i]);
+		writer.put_nop();
+		writer.put_nop();
+		writer.put_nop();
+	}
 
 	writer.section(BufferSegment::R | BufferSegment::W);
 
@@ -204,8 +212,7 @@ ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
 	writer.label(PROGRAM_COUNTER);
 	writer.put_word(pc);
 
-	writer.label(INSTRUCTION_OFFSETS);
-	writer.put_data(instructionOffsets.size() * sizeof(uint64_t), instructionOffsets.data());
+
 
 	return ExecutableCore(this, buffer, stopFunction);
 }
