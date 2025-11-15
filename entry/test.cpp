@@ -440,7 +440,104 @@ TEST(interpreter_fibonacci) {
 	CHECK(state.regs[7], 98);
 };
 
+TEST(jit_extended_memory) {
 
+	SourceUnit unit {R"(
+
+		set $0, 3
+		set $1, 93
+		set $2, 213
+		set $3, 56
+		stm $0, $1
+		stm $2, $3
+		ldm $4, $2
+		set $5, 6
+		stm $0, $5
+		set $6, 113
+		set $7, 31
+		stm $6, $7
+		ldm $0, $6
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	ExecutableCore core = state.jit();
+
+	core();
+	CHECK(state.regs[4], 56);
+	CHECK(state.ram[93*256 + 213], 56);
+	CHECK(state.regs[0], 31);
+	CHECK(state.ram[6*256 + 113], 31);
+};
+
+
+
+TEST(jit_peripheal) {
+
+	SourceUnit unit {R"(
+
+		set $0, 8
+		set $1, 9
+		ldm $2, $0
+		add $2, $1
+		stm $0, $2
+		set $3, 98
+		stm $3, $2
+		ldm $4, $3
+
+	)", "file"};
+
+	uint8_t result;
+
+	Peripheral peripheral([&result](uint8_t arg) noexcept{result = arg;}, []() noexcept{return 204;});
+
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	state.peripherals.insert({8, peripheral});
+
+	ExecutableCore core = state.jit();
+
+	core();
+	CHECK(result, 204+9);
+	CHECK(state.regs[4], 204+9);
+
+};
+
+
+TEST(jit_memory) {
+
+	SourceUnit unit {R"(
+
+		set $0, 135
+		set $1, 93
+		stm $0, $1
+		ldm $2, $0
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	ExecutableCore core = state.jit();
+
+	core();
+	CHECK(state.regs[2], 93);
+
+
+};
 
 TEST(jit_fibonacci) {
 
@@ -482,3 +579,6 @@ TEST(jit_fibonacci) {
 
 
 };
+
+
+
