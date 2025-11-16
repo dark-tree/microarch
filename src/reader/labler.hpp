@@ -1,9 +1,10 @@
 #pragma once
+
 #include <algorithm>
 #include <cstdint>
 #include <vector>
 
-class Labelr {
+class Labler {
 
 	private:
 
@@ -11,12 +12,8 @@ class Labelr {
 
 	public:
 
-		bool has(uint16_t target) const {
-			return std::find(targets.begin(), targets.end(), target) != targets.end();
-		}
+		bool has(uint16_t target) const;
 
-		void add(uint16_t target) {
-			if (!has(target)) targets.push_back(target);
-		}
+		void add(uint16_t target);
 
 };

@@ -15,6 +15,8 @@ class MicroInst {
 
 	protected:
 
+		using TwoArgumentJitInstruction = void (BufferWriter::*)(Location, Location);
+
 		/// Get condition prefix
 		std::string prefix() const;
 
@@ -24,70 +26,20 @@ class MicroInst {
 		/// Check if this instruction should execute
 		bool checkFlags(const CoreState& state) const;
 
-		static void jitComputeRegistrySet(BufferWriter& writer, Registry output, uint8_t registrySet) {
-			bool firstMoved = false;
-			for (unsigned int i = 0; i<CoreState::REGISTER_COUNT; i++) {
-				if (registrySet % 2) {
-					if (!firstMoved) {
-						writer.put_mov(output, CoreState::REGISTRY_MAPPING[i]);
-						firstMoved = true;
-					} else {
-						writer.put_or(output, CoreState::REGISTRY_MAPPING[i]);
-					}
-				}
-				registrySet = registrySet >> 1;
-			}
-		}
+		// Generate instructions, that will compute value of the given registry set and place into the given register
+		static void jitComputeRegistrySet(BufferWriter& writer, Registry output, uint8_t registrySet);
 
-		static void jitWriteToRegistrySet(BufferWriter& writer, Location input, uint8_t registrySet) {
-			for (unsigned int i = 0; i<CoreState::REGISTER_COUNT; i++) {
-				if (registrySet % 2) {
-					writer.put_mov( CoreState::REGISTRY_MAPPING[i], input);
-				}
-				registrySet = registrySet >> 1;
-			}
-		}
+		// Place value into selected registry set
+		static void jitWriteToRegistrySet(BufferWriter& writer, Location input, uint8_t registrySet);
 
-		typedef void(BufferWriter::*TwoArgumentJITInstruction)(Location, Location);
+		// Run the provided x86 instruction on values of registry sets a and b, save the result to registry set a
+		void jitApplyInstructionOnRegistrySets(BufferWriter& writer, TwoArgumentJitInstruction instruction) const;
 
-		void jitApplyInstructionOnRegistrySets(BufferWriter& writer, TwoArgumentJITInstruction instruction) const {
-			jitComputeRegistrySet(writer, DL, a);
-			jitComputeRegistrySet(writer, BL, b);
-			(writer.*instruction)(DL, BL);
-			jitWriteToRegistrySet(writer, DL, a);
-		}
+		// Jumps to the returned label if the condition is not fulfilled
+		Label jitInsertConditionalJumpIfNeeded(BufferWriter& writer) const;
 
-		Label jitInsertConditionalJumpIfNeeded(BufferWriter& writer) const{
-			if (condition == MicroWriter::T) {
-				return {};
-			}
-			auto label = Label::make_unique();
-			if (condition == MicroWriter::F) {
-				writer.put_jmp(label);
-			}
-			else {
-				static std::unordered_map <MicroWriter::Cond, void(BufferWriter::*)(Location)> JUMP_CONDITION_MAPPING ={
-					{MicroWriter::Cond::NBE, &BufferWriter::put_jbe},
-					{MicroWriter::Cond::NC, &BufferWriter::put_jc},
-					{MicroWriter::Cond::C, &BufferWriter::put_jnc},
-					{MicroWriter::Cond::NE, &BufferWriter::put_je},
-					{MicroWriter::Cond::E, &BufferWriter::put_jne},
-				};
-				writer.put_push(SI);
-				writer.put_popf();
-				auto func = JUMP_CONDITION_MAPPING.at(condition);
-				(writer.*func)(label);
-			}
-			return label;
-		}
-
-		void jitConditionalExecute(BufferWriter& writer, std::function<void()>&& operation) {
-			auto label = jitInsertConditionalJumpIfNeeded(writer);
-			operation();
-			if (!label.empty()) {
-				writer.label(label);
-			}
-		}
+		// Surround instructions writen in the operation function with a conditional jump to make a conditional instruction
+		void jitConditionalExecute(BufferWriter& writer, std::function<void()>&& operation);
 
 	public:
 
@@ -98,7 +50,7 @@ class MicroInst {
 		const uint8_t b;
 
 		MicroInst(uint16_t address, MicroWriter::Cond condition, uint8_t a, uint8_t b)
-			: address(address), condition(condition), a(a), b(b) {
+				: address(address), condition(condition), a(a), b(b) {
 		}
 
 		virtual ~MicroInst();
@@ -119,13 +71,13 @@ class MicroInst {
 		 * If this instruction references a label it should be appended to the given labeler
 		 * for them to appear in the output.
 		 */
-		virtual void label(Labelr& labelr);
+		virtual void label(Labler& labelr);
 
 		/**
 		 * Append this instruction to the JIT buffer as native instructions,
 		 * using this method on a series of instructions generates a JIT application.
 		 */
-		virtual void jit(BufferWriter& writer, CoreState& core){};
+		virtual void jit(BufferWriter& writer, CoreState& core) {};
 
 };
 
@@ -332,7 +284,7 @@ struct InstCtr : MicroInst {
 			writer.put_movzx(RDI, CL);
 			writer.put_shr(RDI, 5);
 			// Saving code resume point
-			writer.put_mov(ref<WORD>(CoreState::PROGRAM_COUNTER), address+1);
+			writer.put_mov(ref<WORD>(CoreState::PROGRAM_COUNTER), address + 1);
 			// Stopping the execution
 			writer.put_jnz(CoreState::CLEANUP_CODE);
 		});
@@ -375,7 +327,7 @@ struct InstJpi : MicroInst {
 		state.pc = a << 8 | b;
 	}
 
-	void label(Labelr& labelr) override {
+	void label(Labler& labelr) override {
 		labelr.add(a << 8 | b);
 	}
 
@@ -386,7 +338,7 @@ struct InstJpi : MicroInst {
 	void jit(BufferWriter& writer, CoreState& core) override {
 		jitConditionalExecute(writer, [&writer, this]() {
 			uint16_t offset = (a << 8) | b;
-			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS) + 8*offset);
+			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS) + 8 * offset);
 			writer.put_jmp(RAX);
 		});
 	}
@@ -415,7 +367,7 @@ struct InstJpr : MicroInst {
 			writer.put_mov(BH, DL);
 			writer.put_movzx(RBX, BX);
 			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS));
-			writer.put_lea(RAX, RAX + RBX*8);
+			writer.put_lea(RAX, RAX + RBX * 8);
 			writer.put_jmp(RAX);
 		});
 	}
@@ -462,15 +414,14 @@ struct InstStm : MicroInst {
 				writer.put_movzx(RDI, DL);
 				writer.put_movzx(RSI, BL);
 				writer.put_lea(RAX, Location(CoreState::MEMORY_WRITE_MAPPING));
-				writer.put_lea(RAX, RAX + RDI*8);
+				writer.put_lea(RAX, RAX + RDI * 8);
 				writer.put_call(RAX);
-			}
-			else {
+			} else {
 				jitComputeRegistrySet(writer, DL, a);
 				jitComputeRegistrySet(writer, BL, b);
 				writer.put_movzx(RDX, DL);
 				writer.put_lea(RAX, CoreState::DATA_MEMORY);
-				writer.put_mov(ref(RAX+RDX), BL);
+				writer.put_mov(ref(RAX + RDX), BL);
 			}
 		});
 	}
@@ -488,15 +439,14 @@ struct InstLdm : MicroInst {
 		if (!state.memorySegmented() || state.ram[CoreState::SEGMENT_REGISTER_ADDRESS] == 0) {
 			auto iterator = state.peripherals.find(address);
 			if (iterator != state.peripherals.end()) {
-				state.write(a,iterator->second.readCallback());
+				state.write(a, iterator->second.readCallback());
 				return;
 			}
 		}
 		if (state.memorySegmented() && CoreState::SEGMENT_REGISTER_ADDRESS != address) {
 			uint16_t final_address = (state.ram[CoreState::SEGMENT_REGISTER_ADDRESS] << 8) | address;
 			state.write(a, state.ram[final_address]);
-		}
-		else {
+		} else {
 			state.write(a, state.ram[address]);
 		}
 	}
@@ -516,15 +466,14 @@ struct InstLdm : MicroInst {
 				jitComputeRegistrySet(writer, BL, b);
 				writer.put_movzx(RDI, BL);
 				writer.put_lea(RAX, Location(CoreState::MEMORY_READ_MAPPING));
-				writer.put_lea(RAX, RAX + RDI*8);
+				writer.put_lea(RAX, RAX + RDI * 8);
 				writer.put_call(RAX);
 				jitWriteToRegistrySet(writer, AL, a);
-			}
-			else {
+			} else {
 				jitComputeRegistrySet(writer, BL, b);
 				writer.put_movzx(RBX, BL);
 				writer.put_lea(RAX, CoreState::DATA_MEMORY);
-				writer.put_mov(DL, ref(RAX+RBX));
+				writer.put_mov(DL, ref(RAX + RBX));
 				jitWriteToRegistrySet(writer, DL, a);
 			}
 		});
