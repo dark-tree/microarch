@@ -1,9 +1,17 @@
 
 #include <assembler.hpp>
+#include <controller.hpp>
+#include <reader/reader.hpp>
+#include <reader/state.hpp>
 #include <source/error.hpp>
 #include <source/tokenizer.hpp>
 
+#define VSTL_TRIGGER_DEBUGGER false
+
 #include "vstl.hpp"
+#include "asm/x86/writer.hpp"
+#include "out/buffer/segmented.hpp"
+#include "out/elf/buffer.hpp"
 
 TEST(tokenize_mixed) {
 
@@ -49,7 +57,7 @@ TEST(tokenize_mixed) {
 		"nop", ";", "nop", "\n", "\n"
 	};
 
-	for (int i = 0; i < tokens.size(); i++) {
+	for (unsigned int i = 0; i < tokens.size(); i++) {
 		const Token& token = tokens[i];
 
 		if (token.lexeme() != expected[i]) {
@@ -152,7 +160,7 @@ TEST(assembler_labels) {
 
 	CHECK(bytes[12], 0b0101'1011);
 	CHECK(bytes[13], 0);
-	CHECK(bytes[14], 6);
+	CHECK(bytes[14], 2);
 
 };
 
@@ -262,3 +270,315 @@ TEST(assembler_if_block) {
 	CHECK(bytes[8*3] & 0xF, 0b1111);
 
 };
+
+TEST (asmiov_sanity_check) {
+
+	using namespace asmio;
+	using namespace asmio::x86;
+
+	SegmentedBuffer buffer;
+	BufferWriter writer {buffer};
+
+	writer.put_mov(RAX, ref(EAX + EBX * 2 + 123));
+	writer.put_mov(EAX, ref(RAX + RBX * 2 + 123));
+
+	EXPECT_ANY() { writer.put_mov(RAX, ref(RAX + EBX * 2 + 123)); };
+	EXPECT_ANY() { writer.put_mov(RAX, ref(EAX + RBX * 2 + 123)); };
+
+};
+
+TEST(reader_disassemble) {
+
+	MessageSink::clear();
+	MessageSink::printer([&] (const Message& message) {
+		FAIL("Unexpected message! " + std::string(message.what()))
+	});
+
+	SourceUnit unit {R"(
+
+		set $1, 42
+		set $4, 1
+		set $5, 0
+
+		test:
+			nop
+			mov $1, $
+
+		jmp test
+		mov $7, $5
+
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	std::string back = state.disassemble();
+
+	CHECK(back, R"(	set $1, 42
+	set $4, 1
+	set $5, 0
+
+l_3:
+	nop
+	mov $1, $
+	jmp l_3
+	mov $7, $5
+)");
+
+};
+
+TEST(controller_hex_input) {
+	auto bytes = decodeHexString("AF2234\n778865\n\r1244AF\nEABCDA\t");
+
+	CHECK(bytes[0], 0xAF);
+	CHECK(bytes[1], 0x22);
+	CHECK(bytes[2], 0x34);
+	CHECK(bytes[3], 0x77);
+	CHECK(bytes[4], 0x88);
+	CHECK(bytes[5], 0x65);
+	CHECK(bytes[6], 0x12);
+	CHECK(bytes[7], 0x44);
+	CHECK(bytes[8], 0xAF);
+	CHECK(bytes[9], 0xEA);
+};
+
+TEST(interpreter_all_instructions) {
+	SourceUnit unit {R"(
+
+		set $01, 42
+		set $23, 19
+		set $45, 7
+		set $67, 213
+		add $0, $1
+		nop
+		cmp $7, $4
+		mov $7, $6
+		stm $6, $2
+		ldm $0, $6
+		nad $2, $3
+		and $4, $5
+		xor $4, $5
+		shr $1, 2
+		cid 0
+		set $0, 255
+		ctr $0, 7
+		set $0, 98
+		set $1, 213
+		jmp $0, $1
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	state.run(4);
+	CHECK(state.regs[0], 42);
+	state.run(1);
+	CHECK(state.regs[0], 84);
+	state.run(2);
+	CHECK(state.regs[7], 206);
+	state.run(1);
+	CHECK(state.regs[7], 213);
+	state.run(2);
+	CHECK(state.regs[0], 19);
+	state.run(1);
+	CHECK(state.regs[2], 236);
+	state.run(1);
+	CHECK(state.regs[4], 7);
+	state.run(1);
+	CHECK(state.regs[4], 0);
+	state.run(1);
+	CHECK(state.regs[1], 10);
+	state.run(1);
+	CHECK(state.regs[0], 0);
+	CHECK(state.regs[1], 0);
+	CHECK(state.regs[2], 0);
+	CHECK(state.regs[3], 0);
+	state.run(2);
+	CHECK(state.ctr.flags.reserved, 7);
+	CHECK(state.ctr.flags.standby_mode, 0);
+	CHECK(state.ctr.flags.interrupt, 0);
+	state.run(3);
+	CHECK(state.pc, 25301);
+};
+
+TEST(interpreter_fibonacci) {
+
+	SourceUnit unit {R"(
+
+		set $0, 10
+		set $1, 1
+		ptl:
+			nop
+		cmp $0, $1
+		nz.jmp ptl
+		set $7, 98
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	state.run(2);
+	for (int i=10; i>0; i--) {
+		CHECK(state.regs[0], i);
+		state.run(3);
+	}
+	state.run(1);
+	CHECK(state.regs[7], 98);
+};
+
+TEST(jit_extended_memory) {
+
+	SourceUnit unit {R"(
+
+		set $0, 3
+		set $1, 93
+		set $2, 213
+		set $3, 56
+		stm $0, $1
+		stm $2, $3
+		ldm $4, $2
+		set $5, 6
+		stm $0, $5
+		set $6, 113
+		set $7, 31
+		stm $6, $7
+		ldm $0, $6
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	ExecutableCore core = state.jit();
+
+	core();
+	CHECK(state.regs[4], 56);
+	CHECK(state.ram[93*256 + 213], 56);
+	CHECK(state.regs[0], 31);
+	CHECK(state.ram[6*256 + 113], 31);
+};
+
+
+
+TEST(jit_peripheal) {
+
+	SourceUnit unit {R"(
+
+		set $0, 8
+		set $1, 9
+		ldm $2, $0
+		add $2, $1
+		stm $0, $2
+		set $3, 98
+		stm $3, $2
+		ldm $4, $3
+
+	)", "file"};
+
+	uint8_t result;
+
+	Peripheral peripheral([&result](uint8_t arg) noexcept{result = arg;}, []() noexcept{return 204;});
+
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	state.peripherals.insert({8, peripheral});
+
+	ExecutableCore core = state.jit();
+
+	core();
+	CHECK(result, 204+9);
+	CHECK(state.regs[4], 204+9);
+
+};
+
+
+TEST(jit_memory) {
+
+	SourceUnit unit {R"(
+
+		set $0, 135
+		set $1, 93
+		stm $0, $1
+		ldm $2, $0
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	ExecutableCore core = state.jit();
+
+	core();
+	CHECK(state.regs[2], 93);
+
+
+};
+
+TEST(jit_fibonacci) {
+
+	SourceUnit unit {R"(
+
+		set $0, 13
+		set $1, 1
+		set $2, 0
+		set $3, 1
+		set $5, 255
+		ptl:
+			ctr $5, 224
+			mov $4, $3
+			add $4, $2
+			mov $2, $3
+			mov $3, $4
+		cmp $0, $1
+		set $6, 0
+		set $7, 5
+		nz.jmp $6, $7
+		ctr $5, 224
+
+	)", "file"};
+
+	auto tokens = Tokenizer::tokenize(&unit);
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	ExecutableCore core = state.jit();
+
+	uint8_t fibonacci_sequence [] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233};
+
+	for (int i=0;i<14;i++) {
+		core();
+		CHECK(state.regs[2], fibonacci_sequence[i]);
+	}
+
+
+};
+
+
+

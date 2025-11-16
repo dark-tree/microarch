@@ -12,7 +12,13 @@ FetchContent_Declare(
 		GIT_TAG 75778e49a0d2ce95642472bd4ed8dcc8c1ba2793
 )
 
-FetchContent_MakeAvailable(vstl)
+FetchContent_Declare(
+		asmiov
+		GIT_REPOSITORY https://github.com/dark-tree/asmiov
+		GIT_TAG d7eeccfe4f70de8ec992b2d31edd5caab28a5593
+)
+
+FetchContent_MakeAvailable(vstl asmiov)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -22,17 +28,19 @@ target_include_directories(microarch_common INTERFACE
 		src/
 )
 
-add_executable(test
+add_executable(microarch_test
 		entry/test.cpp
 		${SOURCES}
 )
 
-target_link_libraries(test PRIVATE
+target_link_libraries(microarch_test PRIVATE
 		microarch_common
+		asmiov
 )
 
-target_include_directories(test PRIVATE
+target_include_directories(microarch_common INTERFACE
 		${vstl_SOURCE_DIR}
+		${asmiov_SOURCE_DIR}/src
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -53,7 +61,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 			-Werror=return-local-addr   # Fail if a pointer to a local variable is returned
 			-Werror=init-self           # Fail if a class member is initialized with itself
 			-Werror=uninitialized       # Fail if a uninitialized variables is used
-			-Werror=cast-qual           # Fail when you try to cast the const away
+#			-Werror=cast-qual           # Fail when you try to cast the const away
 			-Werror=switch
 
 			# Warnings
@@ -85,6 +93,7 @@ add_executable(microarch
 
 target_link_libraries(microarch PRIVATE
 		microarch_common
+		asmiov
 )
 
 install(TARGETS microarch)

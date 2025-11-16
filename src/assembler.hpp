@@ -12,7 +12,7 @@ class Assembler {
 		static inline std::unordered_map<std::string_view, MicroWriter::Cond> conditions = {
 			{"f", MicroWriter::F},
 			{"t", MicroWriter::T},
-			{"nba", MicroWriter::NBA},
+			{"nbe", MicroWriter::NBE},
 			{"a", MicroWriter::A},
 			{"nc", MicroWriter::NC},
 			{"nb", MicroWriter::NB},

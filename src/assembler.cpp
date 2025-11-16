@@ -102,7 +102,10 @@ void Assembler::parseOperation(Parser parser, std::string_view mnemonic, MicroWr
 		}
 
 		if (mnemonic == "ctr") {
-			writer.putCtr(parseImmediate(parser));
+			uint8_t arg1 = parseRegisterSet(parser);
+			parser.expect(",");
+			uint8_t arg2 = parseImmediate(parser);
+			writer.putCtr(arg1, arg2);
 			return;
 		}
 
@@ -136,7 +139,7 @@ void Assembler::parseOperation(Parser parser, std::string_view mnemonic, MicroWr
 		if (mnemonic == "shr") {
 			uint8_t arg1 = parseRegisterSet(parser);
 			parser.expect(",");
-			uint8_t arg2 = parseRegisterSet(parser);
+			uint8_t arg2 = parseImmediate(parser);
 
 			writer.putShr(arg1, arg2);
 			return;

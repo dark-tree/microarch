@@ -7,8 +7,12 @@ class MicroWriter {
 
 	private:
 
-		/// Removes the previous condition that was applied with pushCondition()
-		void popCondition();
+		struct Link {
+			uint32_t label;  // the unique label identifier
+			uint32_t offset; // byte offset from the start of the buffer
+		};
+
+	public:
 
 		// instruction flag parts
 		static constexpr uint8_t ZF_TRUE = 0b1000;
@@ -36,12 +40,10 @@ class MicroWriter {
 		static constexpr uint8_t OP_ADD = 0b1110;
 		static constexpr uint8_t OP_CMP = 0b1111;
 
-		struct Link {
-			uint32_t label;  // the unique label identifier
-			uint32_t offset; // byte offset from the start of the buffer
-		};
-
 	public:
+
+		/// Removes the previous condition that was applied with pushCondition()
+		void popCondition();
 
 		struct ConditionScopeGuard {
 			MicroWriter* writer;
@@ -61,8 +63,8 @@ class MicroWriter {
 		enum Cond : uint8_t {
 			F   = 0,
 			T   = CF_IGNORE | ZF_IGNORE,
-			NBA = ZF_FALSE | CF_FALSE,
-			A   = NBA,
+			NBE = ZF_FALSE | CF_FALSE,
+			A   = NBE,
 			NC  = CF_FALSE | ZF_IGNORE,
 			NB  = NC,
 			AE  = NC,
@@ -151,7 +153,7 @@ class MicroWriter {
 		 *
 		 * @param flags Flags to write to the internal control register
 		 */
-		void putCtr(uint8_t flags);
+		void putCtr(uint8_t flagRegset, uint8_t bitmask);
 
 		/**
 		 * Read values from both input registry sets (Argument 1 & 2) bitwise NAND them
