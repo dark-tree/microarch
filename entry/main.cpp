@@ -11,8 +11,9 @@ int main(int argc, char* argv[]) {
 	builder.add("hex", 'x').detail("Output simple hex encoded text.");
 	builder.add("output", 'O').detail("Output file path.").fallback("a.bin").type(argx::string);
 	builder.add("input", 'I').detail("Path to file to assemble.").type(argx::string);
-	builder.add("assemble", 'a').detail("Assemble text input into machine code.").type(argx::flag).conflicts("disassemble");
-	builder.add("disassemble", 'd').detail("Disassemble binary input back into text.").type(argx::flag).conflicts("output").conflicts("assemble");
+	builder.add("assemble", 'a').detail("Assemble text input into machine code.").type(argx::flag).conflicts("disassemble").conflicts("run");
+	builder.add("disassemble", 'd').detail("Disassemble binary input back into text.").type(argx::flag).conflicts("output").conflicts("assemble").conflicts("run");
+	builder.add("run", 'r').detail("Emulate a MicroArch program.").type(argx::flag).conflicts("output").conflicts("disassemble").conflicts("assemble");
 
 	argx::parsed parsed = builder.parse(argc, argv);
 
@@ -27,6 +28,11 @@ int main(int argc, char* argv[]) {
 
 	if (parsed.get("disassemble")) {
 		disassemble(input, hex);
+		return 0;
+	}
+
+	if (parsed.get("run")) {
+		run(input, hex);
 		return 0;
 	}
 

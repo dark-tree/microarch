@@ -117,6 +117,8 @@ struct CoreState {
 	/// Compile the program into a JIT executable buffer
 	ExecutableCore jit(std::function<void()> stopFunction = []() noexcept {});
 
+	/// Get register value as binary string
+	std::string reg(int regnum) const;
 
 private:
 

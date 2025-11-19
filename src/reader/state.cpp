@@ -16,9 +16,9 @@ static void dumpJITData(ExecutableCore* executableCore) {
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
 	uint16_t* pc = (uint16_t*) code.address(CoreState::PROGRAM_COUNTER);
-	for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
-		core->ram[i] = dataMemory[i];
-	}
+	// for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
+	// 	core->ram[i] = dataMemory[i];
+	// }
 	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
 		core->regs[i] = registerDumpZone[i];
 	}
@@ -34,9 +34,9 @@ static void initJITData(ExecutableCore* executableCore) {
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
 	uint16_t* pc = (uint16_t*) code.address(CoreState::PROGRAM_COUNTER);
-	for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
-		dataMemory[i] = core->ram[i];
-	}
+	// for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
+	// 	dataMemory[i] = core->ram[i];
+	// }
 	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
 		registerDumpZone[i] = core->regs[i];
 	}
@@ -129,8 +129,21 @@ void CoreState::run(size_t count) {
 			break;
 		}
 		uint16_t current_instruction = pc;
-		pc += 1;
+
+		uint16_t next_instruction = pc + 1;
+		bool advance = false;
+
+		if (next_instruction < rom.size()) {
+			advance = true;
+			pc = next_instruction;
+		}
+
 		rom[current_instruction]->apply(*this);
+
+		if (!advance) {
+			ctr.flags.standby_mode = 1;
+			break;
+		}
 	}
 }
 
@@ -352,7 +365,14 @@ ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
 	writer.label(PROGRAM_COUNTER);
 	writer.put_word(pc);
 
-
 	return ExecutableCore(this, buffer, stopFunction);
+}
+
+std::string CoreState::reg(int regnum) const {
+	const std::string bits[16] = {
+		"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111",
+	};
+
+	return bits[regnum & 0xF] + bits[(regnum >> 4) & 0xF];
 }
 

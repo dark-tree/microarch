@@ -1,6 +1,7 @@
 #include "controller.hpp"
 
 #include <assembler.hpp>
+#include <chrono>
 #include <cstring>
 #include <file.hpp>
 #include <reader/reader.hpp>
@@ -113,4 +114,83 @@ void disassemble(const std::string& input, bool use_hex) {
 
 	std::string back = state.disassemble();
 	printf("%s\n", back.c_str());
+}
+
+void run(const std::string& input, bool use_hex) {
+	std::vector<uint8_t> bytes = loadBinaryInput(input, use_hex);
+
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	auto time = [] (const std::function<void()>& benchmark) {
+		auto start = std::chrono::high_resolution_clock::now();
+
+		benchmark();
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+		printf("Done in %ldns\n", ns);
+	};
+
+	while (true) {
+
+		std::string command;
+		std::cin >> command;
+
+		if (command == "help" || command == "h" || command == "?") {
+			printf("Valid commands:\n");
+			printf(" help, h - Show this help page\n");
+			printf(" run,  r - Run program using interpreter\n");
+			printf(" jit,  j - Run program using JIT\n");
+			printf(" step, s - Single step forward\n");
+			printf(" regs, r - Print registers\n");
+			printf(" list, l - Print program\n");
+			printf(" quit, q - Quit microarch emulator\n");
+			continue;
+		}
+
+		if (command == "run" || command == "r") {
+			time([&] {
+				state.run();
+			});
+
+			continue;
+		}
+
+		if (command == "jit" || command == "j") {
+			auto executable = state.jit();
+
+			time([&] {
+				executable();
+			});
+
+			continue;
+		}
+
+		if (command == "step" || command == "s") {
+			state.run(1);
+			continue;
+		}
+
+		if (command == "regs" || command == "r") {
+			printf("R0=%s  R4=%s\n", state.reg(0).c_str(), state.reg(4).c_str());
+			printf("R1=%s  R5=%s\n", state.reg(1).c_str(), state.reg(5).c_str());
+			printf("R2=%s  R6=%s\n", state.reg(2).c_str(), state.reg(6).c_str());
+			printf("R3=%s  R7=%s\n", state.reg(3).c_str(), state.reg(7).c_str());
+			printf("PC=0x%04x CF=%d ZF=%d\n", state.pc, state.cf, state.zf);
+		}
+
+		if (command == "list" || command == "l") {
+			std::string back = state.disassemble();
+			printf("%s\n", back.c_str());
+		}
+
+		if (command == "quit" || command == "q") {
+			break;
+		}
+
+	}
+
+	printf("Goodbye!\n");
 }
