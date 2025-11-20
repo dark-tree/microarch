@@ -141,17 +141,16 @@ void CoreState::run(size_t count) {
 			break;
 		}
 
-		const uint16_t current_instruction = pc;
-		const uint16_t next_instruction = pc + 1;
-		pc = next_instruction;
+		const uint16_t current = pc;
 
 		// stop if we run out of instructions
-		if (current_instruction >= rom.size()) {
+		if (current >= rom.size()) {
 			ctr.flags.standby_mode = 1;
 			break;
 		}
 
-		rom[current_instruction]->apply(*this);
+		pc ++;
+		rom[current]->apply(*this);
 	}
 }
 
