@@ -41,8 +41,7 @@ std::vector<uint8_t> loadBinaryInput(const std::string& input, bool use_hex) {
 	return decodeHexString(data);
 }
 
-void assemble(const std::string& input, const std::string& output, bool use_hex) {
-
+std::optional<std::vector<uint8_t>> assemble(const std::string& input) {
 	std::string source = file::read(input);
 
 	MessageSink::clear();
@@ -71,7 +70,7 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 
 	if (MessageSink::error()) {
 		printf("\nCompilation aborted due to errors; no output produced.\n");
-		return;
+		return std::nullopt;
 	}
 
 	Assembler assembler;
@@ -79,6 +78,16 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 
 	if (MessageSink::error()) {
 		printf("\nCompilation aborted due to errors; no output produced.\n");
+		return std::nullopt;
+	}
+
+	return bytes;
+}
+
+void assemble(const std::string& input, const std::string& output, bool use_hex) {
+	auto opt = assemble(input);
+
+	if (!opt.has_value()) {
 		return;
 	}
 
@@ -86,8 +95,8 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 		char const hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 		std::string result;
 
-		for (size_t i = 0, c = 0; i < bytes.size(); i ++) {
-			char const byte = bytes[i];
+		for (size_t i = 0, c = 0; i < opt->size(); i ++) {
+			char const byte = opt->at(i);
 
 			result += hex[(byte & 0xF0) >> 4];
 			result += hex[(byte & 0x0F) >> 0];
@@ -102,8 +111,7 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 		return;
 	}
 
-	file::write(output, bytes);
-
+	file::write(output, *opt);
 }
 
 void disassemble(const std::string& input, bool use_hex) {
@@ -116,9 +124,7 @@ void disassemble(const std::string& input, bool use_hex) {
 	printf("%s\n", back.c_str());
 }
 
-void run(const std::string& input, bool use_hex) {
-	std::vector<uint8_t> bytes = loadBinaryInput(input, use_hex);
-
+void run(const std::vector<uint8_t>& bytes) {
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 

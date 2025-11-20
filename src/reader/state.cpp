@@ -1,5 +1,6 @@
 #include "state.hpp"
 
+#include <format>
 #include <out/buffer/writer.hpp>
 
 #include "instruction.hpp"
@@ -112,17 +113,17 @@ std::string CoreState::disassemble() const {
 
 	Labeler labeler;
 
-	for (auto& inst: rom) {
+	for (auto& inst : rom) {
 		inst->label(labeler);
 	}
 
-	for (auto& inst: rom) {
+	for (auto& inst : rom) {
 
 		if (labeler.has(inst->address)) {
 			str += "\nl_" + std::to_string(inst->address) + ":\n";
 		}
 
-		str += "\t" + inst->string();
+		str += std::format("{:04X}\t", inst->address) + inst->string();
 		str += "\n";
 	}
 
