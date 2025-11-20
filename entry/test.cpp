@@ -465,7 +465,7 @@ TEST(jit_extended_memory) {
 	auto bytes = assembler.assemble(tokens);
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
-
+	state.DATA_MEMORY_SIZE = 200*CoreState::DATA_MEMORY_SEGMENT_SIZE;
 	ExecutableCore core = state.jit();
 
 	core();

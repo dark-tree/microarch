@@ -61,7 +61,7 @@ struct CoreState {
 
 	static constexpr uint16_t SEGMENT_REGISTER_ADDRESS = 0x0003;
 	static constexpr unsigned int DATA_MEMORY_SEGMENT_SIZE = 256;
-	unsigned int DATA_MEMORY_SIZE = 256 * DATA_MEMORY_SEGMENT_SIZE;
+	unsigned int DATA_MEMORY_SIZE = 1 * DATA_MEMORY_SEGMENT_SIZE;
 
 	static constexpr unsigned int REGISTER_COUNT = 8;
 	static constexpr asmio::x86::Registry REGISTRY_MAPPING[] = {

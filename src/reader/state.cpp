@@ -16,9 +16,9 @@ static void dumpJITData(ExecutableCore* executableCore) {
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
 	uint16_t* pc = (uint16_t*) code.address(CoreState::PROGRAM_COUNTER);
-	// for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
-	// 	core->ram[i] = dataMemory[i];
-	// }
+	 for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
+	 	core->ram[i] = dataMemory[i];
+	 }
 	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
 		core->regs[i] = registerDumpZone[i];
 	}
@@ -34,9 +34,9 @@ static void initJITData(ExecutableCore* executableCore) {
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
 	uint16_t* pc = (uint16_t*) code.address(CoreState::PROGRAM_COUNTER);
-	// for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
-	// 	dataMemory[i] = core->ram[i];
-	// }
+	 for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
+	 	dataMemory[i] = core->ram[i];
+	 }
 	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
 		registerDumpZone[i] = core->regs[i];
 	}
@@ -131,19 +131,14 @@ void CoreState::run(size_t count) {
 		uint16_t current_instruction = pc;
 
 		uint16_t next_instruction = pc + 1;
-		bool advance = false;
-
-		if (next_instruction < rom.size()) {
-			advance = true;
-			pc = next_instruction;
+		pc = next_instruction;
+		if (current_instruction >= rom.size()) {
+			ctr.flags.standby_mode = 1;
+			break;
 		}
 
 		rom[current_instruction]->apply(*this);
 
-		if (!advance) {
-			ctr.flags.standby_mode = 1;
-			break;
-		}
 	}
 }
 
@@ -233,117 +228,120 @@ ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
 	// corresponding to each address. These jumps dispatch operations to appropriate functions, for example reading or writing
 	// memory, peripherals etc.
 
-	// This function takes the segment register (which is mapped at a fixed memory address) and applies it to a memory address,
-	// stored in register RDI
+	if(memorySegmented() || !peripherals.empty()) {
 
-	auto APPLY_SEGMENT_REGISTER = [this, &writer]() {
-		if (memorySegmented()) {
-			writer.put_mov(RDX, RDI);
-			writer.put_mov(DH, ref(Location(CoreState::DATA_MEMORY) + CoreState::SEGMENT_REGISTER_ADDRESS));
-			writer.put_movzx(RDI, DX);
+
+		// This function takes the segment register (which is mapped at a fixed memory address) and applies it to a memory address,
+		// stored in register RDI
+
+		auto APPLY_SEGMENT_REGISTER = [this, &writer]() {
+			if (memorySegmented()) {
+				writer.put_mov(RDX, RDI);
+				writer.put_mov(DH, ref(Location(CoreState::DATA_MEMORY) + CoreState::SEGMENT_REGISTER_ADDRESS));
+				writer.put_movzx(RDI, DX);
+			}
+		};
+
+
+		// Below functions push/pop all registers, that we use to store microarch registers/flags, and that are not preserved by functions
+		// according to Linux x8664 calling convention.
+		auto PUSH_MAPPED_REGISTERS = [this, &writer]() {
+			writer.put_push(RSI);
+			writer.put_push(R8);
+			writer.put_push(R9);
+			writer.put_push(R10);
+			writer.put_push(R11);
+		};
+
+		auto POP_MAPPED_REGISTERS = [this, &writer]() {
+			writer.put_pop(R11);
+			writer.put_pop(R10);
+			writer.put_pop(R9);
+			writer.put_pop(R8);
+			writer.put_pop(RSI);
+		};
+
+		auto JUMP_IF_SEGMENT_NON_ZERO = [this, &writer](Location target) {
+			writer.put_mov(RAX, ref(Location(CoreState::DATA_MEMORY) + CoreState::SEGMENT_REGISTER_ADDRESS));
+			writer.put_add(RAX, 0);
+			writer.put_jnz(target);
+		};
+
+		// Function reads from a memory address specified by RDI, into RAX
+		writer.label(MEMORY_READ_FUNCTION);
+		writer.put_lea(RAX, Location(DATA_MEMORY));
+		APPLY_SEGMENT_REGISTER();
+		writer.put_mov(RAX, ref(RAX + RDI));
+		writer.put_ret();
+
+		// Function stores RSI at memory address specified by RDI
+		writer.label(MEMORY_WRITE_FUNCTION);
+		writer.put_lea(RAX, Location(DATA_MEMORY));
+		APPLY_SEGMENT_REGISTER();
+		writer.put_mov(ref(RAX + RDI), RSI);
+		writer.put_ret();
+
+		// Functions for reading and writing from segment register, which is mapped at a fixed memory address in
+		// every segment
+		writer.label(SEGMENT_REGISTER_WRITE_FUNCTION);
+		writer.put_mov(ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS), RSI);
+		writer.put_ret();
+
+		writer.label(SEGMENT_REGISTER_READ_FUNCTION);
+		writer.put_mov(RAX, ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS));
+		writer.put_ret();
+
+		// Functions below push registers to stack (because we are calling a C++ function) and call the function dispatching
+		// peripheral operations.
+		writer.label(PERIPHERAL_READ_FUNCTION);
+		// All peripherals must be mapped at segment 0, so if segment is not 0 we do a normal memory operation.
+		JUMP_IF_SEGMENT_NON_ZERO(MEMORY_READ_FUNCTION);
+		PUSH_MAPPED_REGISTERS();
+		writer.put_mov(RSI, RDI);
+		writer.put_mov(RAX, (uint64_t) (&readPeripheral));
+		writer.put_mov(RDI, ref(EXECUTABLE_CORE_POINTER));
+		writer.put_call(RAX);
+		POP_MAPPED_REGISTERS();
+		writer.put_ret();
+
+		writer.label(PERIPHERAL_WRITE_FUNCTION);
+		// All peripherals must be mapped at segment 0, so if segment is not 0 we do a normal memory operation.
+		JUMP_IF_SEGMENT_NON_ZERO(MEMORY_WRITE_FUNCTION);
+		PUSH_MAPPED_REGISTERS();
+		writer.put_mov(RDX, RSI);
+		writer.put_mov(RSI, RDI);
+		writer.put_mov(RAX, (uint64_t) (&writePeripheral));
+		writer.put_mov(RDI, ref(EXECUTABLE_CORE_POINTER));
+		writer.put_call(RAX);
+		POP_MAPPED_REGISTERS();
+		writer.put_ret();
+
+		// Arrays with 256 jump instructions each, padded to 8 bytes, that dispatch calls to the above 6 functions.
+		writer.label(MEMORY_READ_MAPPING);
+		for (unsigned int i = 0; i < DATA_MEMORY_SEGMENT_SIZE; i++) {
+			jitPadInstructions(writer, buffer, 8, [&]() {
+				if (i == SEGMENT_REGISTER_ADDRESS) {
+					writer.put_jmp(SEGMENT_REGISTER_READ_FUNCTION);
+				} else if (peripherals.find(i) == peripherals.end()) {
+					writer.put_jmp(MEMORY_READ_FUNCTION);
+				} else {
+					writer.put_jmp(PERIPHERAL_READ_FUNCTION);
+				}
+			});
 		}
-	};
-
-
-	// Below functions push/pop all registers, that we use to store microarch registers/flags, and that are not preserved by functions
-	// according to Linux x8664 calling convention.
-	auto PUSH_MAPPED_REGISTERS = [this, &writer]() {
-		writer.put_push(RSI);
-		writer.put_push(R8);
-		writer.put_push(R9);
-		writer.put_push(R10);
-		writer.put_push(R11);
-	};
-
-	auto POP_MAPPED_REGISTERS = [this, &writer]() {
-		writer.put_pop(R11);
-		writer.put_pop(R10);
-		writer.put_pop(R9);
-		writer.put_pop(R8);
-		writer.put_pop(RSI);
-	};
-
-	auto JUMP_IF_SEGMENT_NON_ZERO = [this, &writer](Location target) {
-		writer.put_mov(RAX, ref(Location(CoreState::DATA_MEMORY) + CoreState::SEGMENT_REGISTER_ADDRESS));
-		writer.put_add(RAX, 0);
-		writer.put_jnz(target);
-	};
-
-	// Function reads from a memory address specified by RDI, into RAX
-	writer.label(MEMORY_READ_FUNCTION);
-	writer.put_lea(RAX, Location(DATA_MEMORY));
-	APPLY_SEGMENT_REGISTER();
-	writer.put_mov(RAX, ref(RAX + RDI));
-	writer.put_ret();
-
-	// Function stores RSI at memory address specified by RDI
-	writer.label(MEMORY_WRITE_FUNCTION);
-	writer.put_lea(RAX, Location(DATA_MEMORY));
-	APPLY_SEGMENT_REGISTER();
-	writer.put_mov(ref(RAX + RDI), RSI);
-	writer.put_ret();
-
-	// Functions for reading and writing from segment register, which is mapped at a fixed memory address in
-	// every segment
-	writer.label(SEGMENT_REGISTER_WRITE_FUNCTION);
-	writer.put_mov(ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS), RSI);
-	writer.put_ret();
-
-	writer.label(SEGMENT_REGISTER_READ_FUNCTION);
-	writer.put_mov(RAX, ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS));
-	writer.put_ret();
-
-	// Functions below push registers to stack (because we are calling a C++ function) and call the function dispatching
-	// peripheral operations.
-	writer.label(PERIPHERAL_READ_FUNCTION);
-	// All peripherals must be mapped at segment 0, so if segment is not 0 we do a normal memory operation.
-	JUMP_IF_SEGMENT_NON_ZERO(MEMORY_READ_FUNCTION);
-	PUSH_MAPPED_REGISTERS();
-	writer.put_mov(RSI, RDI);
-	writer.put_mov(RAX, (uint64_t) (&readPeripheral));
-	writer.put_mov(RDI, ref(EXECUTABLE_CORE_POINTER));
-	writer.put_call(RAX);
-	POP_MAPPED_REGISTERS();
-	writer.put_ret();
-
-	writer.label(PERIPHERAL_WRITE_FUNCTION);
-	// All peripherals must be mapped at segment 0, so if segment is not 0 we do a normal memory operation.
-	JUMP_IF_SEGMENT_NON_ZERO(MEMORY_WRITE_FUNCTION);
-	PUSH_MAPPED_REGISTERS();
-	writer.put_mov(RDX, RSI);
-	writer.put_mov(RSI, RDI);
-	writer.put_mov(RAX, (uint64_t) (&writePeripheral));
-	writer.put_mov(RDI, ref(EXECUTABLE_CORE_POINTER));
-	writer.put_call(RAX);
-	POP_MAPPED_REGISTERS();
-	writer.put_ret();
-
-	// Arrays with 256 jump instructions each, padded to 8 bytes, that dispatch calls to the above 6 functions.
-	writer.label(MEMORY_READ_MAPPING);
-	for (unsigned int i = 0; i < DATA_MEMORY_SEGMENT_SIZE; i++) {
-		jitPadInstructions(writer, buffer, 8, [&]() {
-			if (i == SEGMENT_REGISTER_ADDRESS) {
-				writer.put_jmp(SEGMENT_REGISTER_READ_FUNCTION);
-			} else if (peripherals.find(i) == peripherals.end()) {
-				writer.put_jmp(MEMORY_READ_FUNCTION);
-			} else {
-				writer.put_jmp(PERIPHERAL_READ_FUNCTION);
-			}
-		});
+		writer.label(MEMORY_WRITE_MAPPING);
+		for (unsigned int i = 0; i < DATA_MEMORY_SEGMENT_SIZE; i++) {
+			jitPadInstructions(writer, buffer, 8, [&]() {
+				if (i == SEGMENT_REGISTER_ADDRESS) {
+					writer.put_jmp(SEGMENT_REGISTER_WRITE_FUNCTION);
+				} else if (peripherals.find(i) == peripherals.end()) {
+					writer.put_jmp(MEMORY_WRITE_FUNCTION);
+				} else {
+					writer.put_jmp(PERIPHERAL_WRITE_FUNCTION);
+				}
+			});
+		}
 	}
-	writer.label(MEMORY_WRITE_MAPPING);
-	for (unsigned int i = 0; i < DATA_MEMORY_SEGMENT_SIZE; i++) {
-		jitPadInstructions(writer, buffer, 8, [&]() {
-			if (i == SEGMENT_REGISTER_ADDRESS) {
-				writer.put_jmp(SEGMENT_REGISTER_WRITE_FUNCTION);
-			} else if (peripherals.find(i) == peripherals.end()) {
-				writer.put_jmp(MEMORY_WRITE_FUNCTION);
-			} else {
-				writer.put_jmp(PERIPHERAL_WRITE_FUNCTION);
-			}
-		});
-	}
-
 	writer.section(BufferSegment::R | BufferSegment::W);
 
 	// Data memory
