@@ -57,7 +57,7 @@ TEST(tokenize_mixed) {
 		"nop", ";", "nop", "\n", "\n"
 	};
 
-	for (unsigned int i = 0; i < tokens.size(); i++) {
+	for (size_t i = 0; i < tokens.size(); i++) {
 		const Token& token = tokens[i];
 
 		if (token.lexeme() != expected[i]) {
@@ -461,11 +461,14 @@ TEST(jit_extended_memory) {
 	)", "file"};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
-	state.DATA_MEMORY_SIZE = 200*CoreState::DATA_MEMORY_SEGMENT_SIZE;
+
+	state.data_memory_size = 200 * CoreState::DATA_MEMORY_SEGMENT_SIZE;
 	ExecutableCore core = state.jit();
 
 	core();
@@ -494,15 +497,18 @@ TEST(jit_peripheal) {
 
 	uint8_t result;
 
-	Peripheral peripheral([&result](uint8_t arg) noexcept{result = arg;}, []() noexcept{return 204;});
-
+	Peripheral peripheral {
+		[&result](uint8_t arg) noexcept{ result = arg; },
+		[] () noexcept{ return 204; }
+	};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
-
 	state.peripherals.insert({8, peripheral});
 
 	ExecutableCore core = state.jit();
@@ -526,8 +532,10 @@ TEST(jit_memory) {
 	)", "file"};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 
@@ -563,20 +571,19 @@ TEST(jit_fibonacci) {
 	)", "file"};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 
 	ExecutableCore core = state.jit();
 
-	uint8_t fibonacci_sequence [] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233};
-
-	for (int i=0;i<14;i++) {
+	for (uint8_t next : {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233}) {
 		core();
-		CHECK(state.regs[2], fibonacci_sequence[i]);
+		CHECK(state.regs[2], next);
 	}
-
 
 };
 

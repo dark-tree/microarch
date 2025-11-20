@@ -39,67 +39,92 @@ MicroInst::~MicroInst() {
 	// do nothing
 }
 
-void MicroInst::label(Labler& labelr) {
+void MicroInst::label(Labeler& labeler) {
 	// do nothing
 }
 
-void MicroInst::jitComputeRegistrySet(BufferWriter& writer, Registry output, uint8_t registrySet) {
+void MicroInst::jitReadRegistrySet(BufferWriter& writer, Registry output, uint8_t set) {
 	bool firstMoved = false;
-	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
-		if (registrySet % 2) {
+
+	for (auto reg : CoreState::REGISTRY_MAPPING) {
+		if (set % 2) {
 			if (!firstMoved) {
-				writer.put_mov(output, CoreState::REGISTRY_MAPPING[i]);
+				writer.put_mov(output, reg);
 				firstMoved = true;
 			} else {
-				writer.put_or(output, CoreState::REGISTRY_MAPPING[i]);
+				writer.put_or(output, reg);
 			}
 		}
-		registrySet = registrySet >> 1;
+
+		set = set >> 1;
 	}
 }
 
-void MicroInst::jitWriteToRegistrySet(BufferWriter& writer, Location input, uint8_t registrySet) {
-	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
-		if (registrySet % 2) {
-			writer.put_mov(CoreState::REGISTRY_MAPPING[i], input);
+void MicroInst::jitWriteRegistrySet(BufferWriter& writer, const Location& input, uint8_t set) {
+	for (auto reg : CoreState::REGISTRY_MAPPING) {
+		if (set % 2) {
+			writer.put_mov(reg, input);
 		}
-		registrySet = registrySet >> 1;
+
+		set = set >> 1;
 	}
 }
 
-void MicroInst::jitApplyInstructionOnRegistrySets(BufferWriter& writer, TwoArgumentJitInstruction instruction) const {
-	jitComputeRegistrySet(writer, DL, a);
-	jitComputeRegistrySet(writer, BL, b);
+void MicroInst::jitTwoArgInst(BufferWriter& writer, TwoArgumentJitInstruction instruction) const {
+	jitReadRegistrySet(writer, DL, a);
+	jitReadRegistrySet(writer, BL, b);
 	(writer.*instruction)(DL, BL);
-	jitWriteToRegistrySet(writer, DL, a);
+	jitWriteRegistrySet(writer, DL, a);
 }
 
-Label MicroInst::jitInsertConditionalJumpIfNeeded(BufferWriter& writer) const {
+Label MicroInst::jitWriteConditional(BufferWriter& writer) const {
 	if (condition == MicroWriter::T) {
 		return {};
 	}
+
 	auto label = Label::make_unique();
 	if (condition == MicroWriter::F) {
 		writer.put_jmp(label);
-	} else {
-		static std::unordered_map<MicroWriter::Cond, void (BufferWriter::*)(Location)> JUMP_CONDITION_MAPPING = {
-				{MicroWriter::Cond::NBE, &BufferWriter::put_jbe},
-				{MicroWriter::Cond::NC,  &BufferWriter::put_jc},
-				{MicroWriter::Cond::C,   &BufferWriter::put_jnc},
-				{MicroWriter::Cond::NE,  &BufferWriter::put_je},
-				{MicroWriter::Cond::E,   &BufferWriter::put_jne},
-		};
-		writer.put_push(SI);
-		writer.put_popf();
-		auto func = JUMP_CONDITION_MAPPING.at(condition);
-		(writer.*func)(label);
+		return label;
 	}
-	return label;
+
+	writer.put_push(SI);
+	writer.put_popf();
+
+	if (condition == MicroWriter::Cond::NBE) {
+		writer.put_jbe(label);
+		return label;
+	}
+
+	if (condition == MicroWriter::Cond::NC) {
+		writer.put_jc(label);
+		return label;
+	}
+
+	if (condition == MicroWriter::Cond::C) {
+		writer.put_jnc(label);
+		return label;
+	}
+
+	if (condition == MicroWriter::Cond::NE) {
+		writer.put_je(label);
+		return label;
+	}
+
+	if (condition == MicroWriter::Cond::E) {
+		writer.put_jne(label);
+		return label;
+	}
+
+	throw std::runtime_error {"Unknown condition code!"};
 }
 
-void MicroInst::jitConditionalExecute(BufferWriter& writer, std::function<void()>&& operation) {
-	auto label = jitInsertConditionalJumpIfNeeded(writer);
-	operation();
+void MicroInst::jitConditional(BufferWriter& writer, const std::function<void()>& then) {
+	auto label = jitWriteConditional(writer);
+
+	then();
+
+	// check if no conditional jump was needed
 	if (!label.empty()) {
 		writer.label(label);
 	}

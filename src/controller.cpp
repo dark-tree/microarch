@@ -147,7 +147,7 @@ void run(const std::string& input, bool use_hex) {
 			printf(" regs, r - Print registers\n");
 			printf(" list, l - Print program\n");
 			printf(" quit, q - Quit microarch emulator\n");
-			printf(" clear, c - Reset the simulation\n");
+			printf(" init, i - Reset the simulation\n");
 			continue;
 		}
 
@@ -180,22 +180,18 @@ void run(const std::string& input, bool use_hex) {
 			printf("R2=%s  R6=%s\n", state.reg(2).c_str(), state.reg(6).c_str());
 			printf("R3=%s  R7=%s\n", state.reg(3).c_str(), state.reg(7).c_str());
 			printf("PC=0x%04x CF=%d ZF=%d\n", state.pc, state.cf, state.zf);
+			continue;
 		}
 
-		if (command == "clear" || command == "c"){
-			state.pc = 0;
-			state.zf = 0;
-			state.cf = 0;
-			state.ctr.raw_byte = 0;
-			if(state.memorySegmented())
-			{
-				state.ram[CoreState::SEGMENT_REGISTER_ADDRESS] = 0;
-			}
+		if (command == "init" || command == "i"){
+			state.reset();
+			continue;
 		}
 
 		if (command == "list" || command == "l") {
 			std::string back = state.disassemble();
 			printf("%s\n", back.c_str());
+			continue;
 		}
 
 		if (command == "quit" || command == "q") {
