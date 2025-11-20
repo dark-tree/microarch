@@ -35,8 +35,9 @@ static void jitSaveState(ExecutableCore* executableCore) {
 }
 
 static void jitLoadState(ExecutableCore* executableCore) {
-	asmio::ExecutableBuffer& code = executableCore->code;
+	ExecutableBuffer& code = executableCore->code;
 	CoreState* core = executableCore->core;
+
 	uint8_t* dataMemory = code.address(CoreState::DATA_MEMORY);
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
@@ -171,7 +172,6 @@ ExecutableCore CoreState::jit() {
 
 	using namespace asmio;
 	using namespace asmio::x86;
-
 
 	SegmentedBuffer buffer;
 	BufferWriter writer {buffer};

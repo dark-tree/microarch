@@ -128,15 +128,17 @@ void run(const std::vector<uint8_t>& bytes) {
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 
-	auto time = [] (const std::function<void()>& benchmark) {
+	auto time_of = [] (const std::function<void()>& benchmark) -> long {
 		auto start = std::chrono::high_resolution_clock::now();
 
 		benchmark();
 
 		auto end = std::chrono::high_resolution_clock::now();
-		auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+	};
 
-		printf("Done in %ldns\n", ns);
+	auto time = [&] (const std::function<void()>& benchmark) {
+		printf("Done in %ldns\n", time_of(benchmark));
 	};
 
 	while (true) {
@@ -154,6 +156,7 @@ void run(const std::vector<uint8_t>& bytes) {
 			printf(" list, l - Print program\n");
 			printf(" quit, q - Quit microarch emulator\n");
 			printf(" init, i - Reset the simulation\n");
+			printf(" perf, p - Benchmark the interpreter and JIT\n");
 			continue;
 		}
 
@@ -189,7 +192,35 @@ void run(const std::vector<uint8_t>& bytes) {
 			continue;
 		}
 
-		if (command == "init" || command == "i"){
+		if (command == "perf" || command == "p") {
+			auto executable = state.jit();
+
+			int iterations = 1000;
+			size_t int_time = 0;
+			size_t jit_time = 0;
+
+			for (int i = 0; i < iterations; i ++) {
+				state.reset();
+
+				int_time += time_of([&] {
+					state.run();
+				});
+
+				state.reset();
+
+				jit_time += time_of([&] {
+					executable();
+				});
+			}
+
+			printf("Results after %d iterations:\n", iterations);
+			printf(" * Interpreter: %luns total (%fms)\n", int_time, int_time / 1000000.0);
+			printf(" * JIT: %luns total (%fms)\n", jit_time, jit_time / 1000000.0);
+			continue;
+		}
+
+		if (command == "init" || command == "i") {
+			printf("Program reset back to the beginning.\n");
 			state.reset();
 			continue;
 		}
@@ -203,6 +234,8 @@ void run(const std::vector<uint8_t>& bytes) {
 		if (command == "quit" || command == "q") {
 			break;
 		}
+
+		printf("Unknown command '%s', use help for a list of commands.\n", command.c_str());
 
 	}
 
