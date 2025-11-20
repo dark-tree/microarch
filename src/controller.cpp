@@ -141,7 +141,7 @@ void run(const std::string& input, bool use_hex) {
 		if (command == "help" || command == "h" || command == "?") {
 			printf("Valid commands:\n");
 			printf(" help, h - Show this help page\n");
-			printf(" run,  r - Run program using interpreter\n");
+			printf(" run,  c - Run program using interpreter\n");
 			printf(" jit,  j - Run program using JIT\n");
 			printf(" step, s - Single step forward\n");
 			printf(" regs, r - Print registers\n");
@@ -151,7 +151,7 @@ void run(const std::string& input, bool use_hex) {
 			continue;
 		}
 
-		if (command == "run" || command == "r") {
+		if (command == "run" || command == "c") {
 			time([&] {
 				state.run();
 			});
