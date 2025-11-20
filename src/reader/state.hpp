@@ -17,9 +17,8 @@ struct ExecutableCore {
 
 	CoreState* core;
 	asmio::ExecutableBuffer code;
-	std::function<void()> stopFunction;
 
-	ExecutableCore(CoreState* core, asmio::SegmentedBuffer& codeBuffer, std::function<void()> stopFunction) : core(core), code(asmio::to_executable(codeBuffer)), stopFunction(std::move(stopFunction)) {}
+	ExecutableCore(CoreState* core, asmio::SegmentedBuffer& codeBuffer) : core(core), code(asmio::to_executable(codeBuffer)) {}
 
 	void operator()() {
 		code.scall<void>(CODE_START, this);
@@ -115,7 +114,7 @@ struct CoreState {
 	void run(size_t count = std::numeric_limits<size_t>::max());
 
 	/// Compile the program into a JIT executable buffer
-	ExecutableCore jit(std::function<void()> stopFunction = []() noexcept {});
+	ExecutableCore jit();
 
 	/// Get register value as binary string
 	std::string reg(int regnum) const;

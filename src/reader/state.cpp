@@ -153,7 +153,7 @@ void CoreState::jitPadInstructions(asmio::x86::BufferWriter& writer, SegmentedBu
 }
 
 
-ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
+ExecutableCore CoreState::jit() {
 
 	using namespace asmio;
 	using namespace asmio::x86;
@@ -363,7 +363,7 @@ ExecutableCore CoreState::jit(std::function<void()> stopFunction) {
 	writer.label(PROGRAM_COUNTER);
 	writer.put_word(pc);
 
-	return ExecutableCore(this, buffer, stopFunction);
+	return ExecutableCore(this, buffer);
 }
 
 std::string CoreState::reg(int regnum) const {
