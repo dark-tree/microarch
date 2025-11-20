@@ -16,9 +16,12 @@ static void dumpJITData(ExecutableCore* executableCore) {
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
 	uint16_t* pc = (uint16_t*) code.address(CoreState::PROGRAM_COUNTER);
-	 for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
-	 	core->ram[i] = dataMemory[i];
-	 }
+	if(executableCore->retrieveMemory)
+	{
+		for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
+			core->ram[i] = dataMemory[i];
+		}
+	}
 	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
 		core->regs[i] = registerDumpZone[i];
 	}
@@ -34,9 +37,12 @@ static void initJITData(ExecutableCore* executableCore) {
 	uint8_t* registerDumpZone = code.address(CoreState::REGISTERS);
 	uint16_t* flagsDumpZone = (uint16_t*) code.address(CoreState::FLAGS);
 	uint16_t* pc = (uint16_t*) code.address(CoreState::PROGRAM_COUNTER);
-	 for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
-	 	dataMemory[i] = core->ram[i];
-	 }
+	if(executableCore->retrieveMemory)
+	{
+		for (unsigned int i = 0; i < core->DATA_MEMORY_SIZE; i++) {
+			dataMemory[i] = core->ram[i];
+		}
+	}
 	for (unsigned int i = 0; i < CoreState::REGISTER_COUNT; i++) {
 		registerDumpZone[i] = core->regs[i];
 	}

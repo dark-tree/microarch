@@ -18,6 +18,8 @@ struct ExecutableCore {
 	CoreState* core;
 	asmio::ExecutableBuffer code;
 
+	bool retrieveMemory = true;
+
 	ExecutableCore(CoreState* core, asmio::SegmentedBuffer& codeBuffer) : core(core), code(asmio::to_executable(codeBuffer)) {}
 
 	void operator()() {
