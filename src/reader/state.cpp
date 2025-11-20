@@ -198,13 +198,22 @@ ExecutableCore CoreState::jit() {
 	writer.label(PROGRAM_MEMORY);
 	std::vector<Label> instructionOffsets;
 	for (auto& inst: rom) {
+
+		// Saving labels for every instruction, to enable jumps.
 		auto instructionLabel = Label::make_unique();
 		writer.label(instructionLabel);
 		instructionOffsets.push_back(instructionLabel);
+
 		inst->jit(writer, *this);
 	}
 
+	// We create a final label at the end of the program, to enable jumps to the end
+	auto endOfProgramLabel = Label::make_unique();
+	writer.label(endOfProgramLabel);
+	instructionOffsets.push_back(endOfProgramLabel);
 
+	// At the end of the program, we save information about what instruction we finished on (always the last)
+	writer.put_mov(ref<WORD>(PROGRAM_COUNTER), rom.size());
 
 	// Saving data memory, flags and registers back to core state
 	writer.label(CLEANUP_CODE);
