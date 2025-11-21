@@ -160,7 +160,59 @@ void run(const std::vector<uint8_t>& bytes) {
 			printf("  addb, br - Add interpreter breakpoint\n");
 			printf("  remb, rb - Remove interpreter breakpoint\n");
 			printf("  lsbr, lb - List interpreter breakpoints\n");
-			printf("  dump, m - Print random access memory\r");
+			printf("  dump, m  - Print random access memory\n");
+			printf("  addp, pr - Set peripheral at address\n");
+			printf("  remp, rp - Remove peripheral from address\n");
+			printf("  lspr, lp - List peripherals\n");
+			continue;
+		}
+
+		if (command == "addp" || command == "pr") {
+			int pr;
+			std::cin >> pr;
+
+			if (pr < 0 || pr > 0xFFFF) {
+				printf("Invalid peripheral address!\n");
+				continue;
+			}
+
+			printf("Set peripheral at 0x%x\n", pr);
+			state.peripherals[pr] = Peripheral {
+				[pr] (uint8_t value) -> void { printf("Peripheral 0x%x: Write 0x%x\n", pr, value); },
+				[pr] -> uint8_t { printf("Peripheral 0x%x: Read ", pr); int v; std::cin >> v; printf("\n"); return v; },
+			};
+			continue;
+		}
+
+		if (command == "remp" || command == "rp") {
+			int pr;
+			std::cin >> pr;
+
+			if (pr < 0 || pr > 0xFFFF) {
+				printf("Invalid peripheral address!\n");
+				continue;
+			}
+
+			if (state.peripherals.erase(pr)) {
+				printf("Removed peripheral from 0x%x\n", pr);
+			} else {
+				printf("No peripheral set at 0x%x\n", pr);
+			}
+
+			continue;
+		}
+
+		if (command == "lspr" || command == "lp") {
+			if (state.peripherals.empty()) {
+				printf("No peripherals set, use 'pr X' to set one.\n");
+				continue;
+			}
+
+			printf("Peripherals:\n");
+
+			for (auto& [address, peripheral] : state.peripherals) {
+				printf("  0x%x\n", address);
+			}
 			continue;
 		}
 
@@ -260,8 +312,12 @@ void run(const std::vector<uint8_t>& bytes) {
 				continue;
 			}
 
-			printf("Removed breakpoint from 0x%x\n", br);
-			state.breakpoints.erase(br);
+			if (state.breakpoints.erase(br)) {
+				printf("Removed breakpoint from 0x%x\n", br);
+			} else {
+				printf("No breakpoint set at 0x%x\n", br);
+			}
+
 			continue;
 		}
 
