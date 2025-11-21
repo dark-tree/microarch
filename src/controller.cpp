@@ -160,6 +160,21 @@ void run(const std::vector<uint8_t>& bytes) {
 			printf("  addb, br - Add interpreter breakpoint\n");
 			printf("  remb, rb - Remove interpreter breakpoint\n");
 			printf("  lsbr, lb - List interpreter breakpoints\n");
+			printf("  dump, m - Print random access memory\r");
+			continue;
+		}
+
+		if (command == "dump" || command == "m") {
+			for (int i = 0; i < 256; i += 16) {
+				printf("0x%02x: ", i);
+
+				for (int j = 0; j < 16; j ++) {
+					printf("%02x ", state.ram[i + j]);
+				}
+
+				printf("\n");
+			}
+
 			continue;
 		}
 
