@@ -148,15 +148,18 @@ void run(const std::vector<uint8_t>& bytes) {
 
 		if (command == "help" || command == "h" || command == "?") {
 			printf("Valid commands:\n");
-			printf(" help, h - Show this help page\n");
-			printf(" run,  c - Run program using interpreter\n");
-			printf(" jit,  j - Run program using JIT\n");
-			printf(" step, s - Single step forward\n");
-			printf(" regs, r - Print registers\n");
-			printf(" list, l - Print program\n");
-			printf(" quit, q - Quit microarch emulator\n");
-			printf(" init, i - Reset the simulation\n");
-			printf(" perf, p - Benchmark the interpreter and JIT\n");
+			printf("  help, h -  Show this help page\n");
+			printf("  run,  c  - Run program using interpreter\n");
+			printf("  jit,  j  - Run program using JIT\n");
+			printf("  step, s  - Single step forward\n");
+			printf("  regs, r  - Print registers\n");
+			printf("  list, l  - Print program\n");
+			printf("  quit, q  - Quit microarch emulator\n");
+			printf("  init, i  - Reset the simulation\n");
+			printf("  perf, p  - Benchmark the interpreter and JIT\n");
+			printf("  addb, br - Add interpreter breakpoint\n");
+			printf("  remb, rb - Remove interpreter breakpoint\n");
+			printf("  lsbr, lb - List interpreter breakpoints\n");
 			continue;
 		}
 
@@ -216,6 +219,48 @@ void run(const std::vector<uint8_t>& bytes) {
 			printf("Results after %d iterations:\n", iterations);
 			printf(" * Interpreter: %luns total (%fms)\n", int_time, int_time / 1000000.0);
 			printf(" * JIT: %luns total (%fms)\n", jit_time, jit_time / 1000000.0);
+			continue;
+		}
+
+		if (command == "addb" || command == "br") {
+			int br;
+			std::cin >> br;
+
+			if (br < 0 || br > 0xFFFF) {
+				printf("Invalid breakpoint address!\n");
+				continue;
+			}
+
+			printf("Set breakpoint at 0x%x\n", br);
+			state.breakpoints.insert(br);
+			continue;
+		}
+
+		if (command == "remb" || command == "rb") {
+			int br;
+			std::cin >> br;
+
+			if (br < 0 || br > 0xFFFF) {
+				printf("Invalid breakpoint address!\n");
+				continue;
+			}
+
+			printf("Removed breakpoint from 0x%x\n", br);
+			state.breakpoints.erase(br);
+			continue;
+		}
+
+		if (command == "lsbr" || command == "lb") {
+			if (state.breakpoints.empty()) {
+				printf("No breakpoints set, use 'br X' to set one.\n");
+				continue;
+			}
+
+			printf("Breakpoints:\n");
+
+			for (uint16_t br : state.breakpoints) {
+				printf("  0x%x\n", br);
+			}
 			continue;
 		}
 

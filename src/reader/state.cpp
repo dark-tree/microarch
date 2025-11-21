@@ -138,6 +138,8 @@ bool CoreState::memorySegmented() const {
 void CoreState::run(size_t count) {
 	ctr.flags.standby_mode = 0;
 
+	int executed = 0;
+
 	for (size_t i = 0; i < count; i++) {
 		if (ctr.flags.standby_mode) {
 			break;
@@ -148,11 +150,18 @@ void CoreState::run(size_t count) {
 		// stop if we run out of instructions
 		if (current >= rom.size()) {
 			ctr.flags.standby_mode = 1;
+			printf("Halted after %d instructions\n", executed);
+			break;
+		}
+
+		if (breakpoints.contains(pc) && (executed > 0)) {
+			printf("Hit breakpoint %x after %d instructions\n", pc, executed);
 			break;
 		}
 
 		pc ++;
 		rom[current]->apply(*this);
+		executed ++;
 	}
 }
 
