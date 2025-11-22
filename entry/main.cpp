@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 	if (parsed.get("run")) {
 		std::vector<uint8_t> bytes;
 
-		if (no_output) {
+		if (parsed.get("assemble")) {
 			auto opt = assemble(input);
 
 			if (!opt) {
