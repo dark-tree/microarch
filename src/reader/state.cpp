@@ -407,7 +407,7 @@ std::string CoreState::reg(int regnum) const {
 	};
 
 	const uint8_t value = regs[regnum];
-	return bits[value & 0xF] + bits[(value >> 4) & 0xF];
+	return bits[(value >> 4) & 0xF] + bits[value & 0xF];
 }
 
 void CoreState::reset() {
