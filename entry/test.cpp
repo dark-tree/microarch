@@ -318,15 +318,15 @@ TEST(reader_disassemble) {
 
 	std::string back = state.disassemble();
 
-	CHECK(back, R"(	set $1, 42
-	set $4, 1
-	set $5, 0
+	CHECK(back, R"(0000	set $1, 42
+0001	set $4, 1
+0002	set $5, 0
 
 l_3:
-	nop
-	mov $1, $
-	jmp l_3
-	mov $7, $5
+0003	nop
+0004	mov $1, $
+0005	jmp l_3
+0006	mov $7, $5
 )");
 
 };
