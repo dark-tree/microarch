@@ -17,7 +17,7 @@ CoreState MicroReader::toProgram(const std::vector<uint8_t>& bytes) {
 		const auto cond = static_cast<MicroWriter::Cond>(head & 0b1111);
 		const uint8_t opcode = (head & 0b1111'0000) >> 4;
 
-		const size_t j = i/3;
+		const size_t j = i / 3;
 
 		switch (opcode) {
 			case MicroWriter::OP_NOP: state.rom.push_back(std::make_unique<InstNop>(j)); break;

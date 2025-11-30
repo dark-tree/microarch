@@ -201,7 +201,8 @@ std::vector<uint8_t> MicroWriter::bake() {
 	std::vector<uint8_t> result = bytes;
 
 	for (auto& link : links) {
-		uint16_t target = (labels.at(link.label) & 0xFFFF)/3; // Dividing by 3, because in microarch each program memory cell has 3 bytes
+		// Dividing by 3, because in microarch each program memory cell has 3 bytes
+		uint16_t target = (labels.at(link.label) & 0xFFFF) / 3;
 		uint32_t offset = link.offset;
 
 		if (result.size() - 1 <= offset) {

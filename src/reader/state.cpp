@@ -188,8 +188,6 @@ ExecutableCore CoreState::jit() {
 	writer.section(BufferSegment::R | BufferSegment::X);
 	writer.label(ExecutableCore::CODE_START);
 
-	using namespace asmio::x86;
-
 	// Saving pointer for accessing core state and labels
 	writer.put_mov(RAX, ref(RAX));
 	writer.put_mov(ref(EXECUTABLE_CORE_POINTER), RAX);
