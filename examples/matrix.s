@@ -1,3 +1,5 @@
+// This is a program, that will multiply the matrix given below by itself and write the last cell of the result to address 3 (where an IO interface can be mounted)
+
 // 64 - address of the matrix
 // 128 - address of the result (for optimization the result will be saved into memory backwards)
 
@@ -200,3 +202,10 @@ jmp ptl
 
 break:
 
+// Writing the last cell of the result matrix to a peripheral
+set $3, 3
+stm $3, $6
+
+// Stopping execution
+set $4, 255
+ctr $4, 224
