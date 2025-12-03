@@ -103,6 +103,9 @@ stm $0, $1
 set $1, 25
 // Current column
 set $2, 0
+set $0, 6
+stm $0, $2
+
 // Number of individual cells multiplications to go before going to the next column
 set $3, 25
 // Row iterator
@@ -117,24 +120,18 @@ ptl:
 	// MULTIPLICATION HERE
 	// We will add the multiplication result to accumulator (R6) immediately anyway and we multiply by adding, so we just add straight to R6
 
-	// Saving this register in memory (because we need 1 register extra for multiplication)
-	set $0, 5
-	stm $0, $4
-	// Saving this register in memory (because we need 1 register extra for multiplication)
-	set $0, 6
-	stm $0, $2
 
 	// Loading 2 elements of the matrix from memory
 	ldm $0, $4
 	ldm $7, $5
 
+
 	// Multiplication loop:
 	mtpl:
 		// If the current lowest bit is 1, we add
-		set $4, 1
-		and $4, $7
-		set $2, 0
-		cmp $2, $4
+		set $2, 1
+		and $2, $7
+		cmp $, $2
 			ne.add $6, $0
 
 		// Shift left
@@ -142,16 +139,8 @@ ptl:
 		// Shift right
 		shr $7, 1
 	//If the number we bitshift is equal to 0 we just end
-	set $2, 0
-	cmp $2, $7
+	cmp $, $7
 	ne.jmp mtpl
-
-	// Restoring previously saved register
-	set $0, 5
-    ldm $4, $0
-    // Restoring previously saved register
-   	set $0, 6
-    ldm $2, $0
 
 	// Adding 5 to the column iterator (moving down in the matrix)
     set $0, 5
@@ -172,6 +161,9 @@ ptl:
 		z.jmp break
 
 
+		// Fetching current column number
+		set $5, 6
+		ldm $2, $5
 		// First element on the n-th column is also n-th element of the first row and the n-th element of the whole matrix, so we add it to the address of the whole matrix (we can use OR, since the address is a power of 2)
 		set $5, 64
 		mov $5, $25
@@ -191,11 +183,16 @@ ptl:
 
 		// Resetting number of multiplications to run before switching columns to 25
 		set $3, 25
+		// Fetching current column number
+        set $4, 6
+        ldm $2, $4
 		// Switching columns
 	 	add $2, $0
 	 	// First element on the n-th column is also n-th element of the first row and the n-th element of the whole matrix, so we add it to the address of the whole matrix (we can use OR, since the address is a power of 2)
 	 	set $5, 64
 	 	mov $5, $25
+	 	// Saving updated column number
+	 	stm $4, $2
 	 	// Starting with the first row, first element
 	 	set $4, 64
 
