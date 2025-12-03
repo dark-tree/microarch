@@ -11,6 +11,7 @@ TESTS;
         SET_SIGNAL(stage_2_ready);
         SET_SIGNAL(ready_for_next_instruction);
         SET_SIGNAL(next_instruction_available);
+        SET_SIGNAL(reset_first_instruction);
         SET_SIGNAL_VECTOR(next_instruction);
         SET_SIGNAL_VECTOR(stage_1_instruction);
         SET_SIGNAL_VECTOR(stage_2_instruction);

@@ -21,6 +21,12 @@ TESTS;
         SET_SIGNAL_VECTOR(memory_address);
         SET_SIGNAL_VECTOR(memory_in);
         SET_SIGNAL_VECTOR(memory_out);
+		SET_SIGNAL_VECTOR(io_registers_address);
+		SET_SIGNAL_VECTOR(io_registers_write_bus);
+		SET_SIGNAL_VECTOR(io_registers_read_bus);
+		SET_SIGNAL(io_registers_ready);
+		SET_SIGNAL(io_registers_write);
+		SET_SIGNAL(io_registers_read);
     START_SIMULATION;
 
         execute = false;
@@ -98,23 +104,29 @@ TESTS;
 
 
     TEST(mmu, reading_and_writing_over_interrupt_address_space)
-        SET_SIGNAL(clk);
-        SET_SIGNAL(execute);
-        SET_SIGNAL(write);
-        SET_SIGNAL(completed);
-        SET_SIGNAL(set_interrupt_return_address);
-        SET_SIGNAL(memory_read_signal);
-        SET_SIGNAL(memory_write_signal);
-        SET_SIGNAL(operation_ongoing);
-        SET_SIGNAL(memory_ready);
-        SET_SIGNAL(pre_completed);
-        SET_SIGNAL_VECTOR(address);
-        SET_SIGNAL_VECTOR(in_data);
-        SET_SIGNAL_VECTOR(out_data);
-        SET_SIGNAL_VECTOR(interrupt_return_address);
-        SET_SIGNAL_VECTOR(memory_address);
-        SET_SIGNAL_VECTOR(memory_in);
-        SET_SIGNAL_VECTOR(memory_out);
+		SET_SIGNAL(clk);
+		SET_SIGNAL(execute);
+		SET_SIGNAL(write);
+		SET_SIGNAL(completed);
+		SET_SIGNAL(set_interrupt_return_address);
+		SET_SIGNAL(memory_read_signal);
+		SET_SIGNAL(memory_write_signal);
+		SET_SIGNAL(operation_ongoing);
+		SET_SIGNAL(memory_ready);
+		SET_SIGNAL(pre_completed);
+		SET_SIGNAL_VECTOR(address);
+		SET_SIGNAL_VECTOR(in_data);
+		SET_SIGNAL_VECTOR(out_data);
+		SET_SIGNAL_VECTOR(interrupt_return_address);
+		SET_SIGNAL_VECTOR(memory_address);
+		SET_SIGNAL_VECTOR(memory_in);
+		SET_SIGNAL_VECTOR(memory_out);
+		SET_SIGNAL_VECTOR(io_registers_address);
+		SET_SIGNAL_VECTOR(io_registers_write_bus);
+		SET_SIGNAL_VECTOR(io_registers_read_bus);
+		SET_SIGNAL(io_registers_ready);
+		SET_SIGNAL(io_registers_write);
+		SET_SIGNAL(io_registers_read);
     START_SIMULATION;
 
 
