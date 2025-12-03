@@ -10,7 +10,7 @@ module pipeline
     input stage_1_ready,
     input stage_1_finished,
     input stage_2_finished,
-	input reset_first_instruction,
+	  input reset_first_instruction,
     input clk
 
   );
