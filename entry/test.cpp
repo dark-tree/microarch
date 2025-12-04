@@ -356,6 +356,28 @@ l_3:
 
 };
 
+TEST(assembler_custom_base) {
+
+	MessageSink::clear();
+	MessageSink::printer([&] (const Message& message) {
+		FAIL("Unexpected message! " + std::string(message.what()))
+	});
+
+	SourceUnit unit {"set $1, 0xff;", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	Assembler assembler;
+	auto bytes = assembler.assemble(tokens);
+
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	std::string back = state.disassemble();
+
+	CHECK(back, "0000\tset $1, 255\n");
+
+};
+
 TEST(controller_hex_input) {
 	auto bytes = decodeHexString("AF2234\n778865\n\r1244AF\nEABCDA\t");
 
