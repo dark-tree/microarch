@@ -281,5 +281,9 @@ std::vector<Token> Tokenizer::tokenize(const SourceUnit* unit) {
 
 	}
 
+	// end of file break
+	lexer.beginToken();
+	sink.push_back(lexer.endToken(Token::BREAK));
+
 	return sink;
 }
