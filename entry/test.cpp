@@ -13,6 +13,17 @@
 #include "out/buffer/segmented.hpp"
 #include "out/elf/buffer.hpp"
 
+void checkTokens(std::vector<Token>& tokens, const std::vector<std::string>& expected) {
+	for (size_t i = 0; i < tokens.size(); i++) {
+		const Token& token = tokens[i];
+
+		if (token.lexeme() != expected[i]) {
+			std::string error = "Token #" + std::to_string(i) + " (" + std::string(token.lexeme()) + ") is not what was expected (" + expected[i] + ")!";
+			FAIL(error);
+		}
+	}
+}
+
 TEST(tokenize_mixed) {
 
 	MessageSink::clear();
@@ -53,18 +64,32 @@ TEST(tokenize_mixed) {
 		"\n","\n","\n","\n", "nop", ";", "\n", "cmp", "$12", ",", "$3", "\n",
 		"\n", "using", "le", "begin", "\n", "\n", "add", "$1", ",", "$", "\n",
 		"set", "$01234567", ",", "0", "\n", "\n", "loop:", "\n", "cid", "0", "\n",
-		"\n", "nz.jmp", "loop", "\n", "\n", "end", "\n", "\n", "nop", ";",
+		"\n", "nz.jmp", "loop", "\n", "\n", "end", "\n", "\n", "\n", "nop", ";",
 		"nop", ";", "nop", "\n", "\n"
 	};
 
-	for (size_t i = 0; i < tokens.size(); i++) {
-		const Token& token = tokens[i];
+	checkTokens(tokens, expected);
 
-		if (token.lexeme() != expected[i]) {
-			std::string error = "Token #" + std::to_string(i) + " (" + std::string(token.lexeme()) + ") is not what was expected!";
-			FAIL(error);
-		}
-	}
+};
+
+TEST(tokenize_line_end_comment) {
+
+	MessageSink::clear();
+	MessageSink::printer([&] (const Message& message) {
+		FAIL("Unexpected message! " + std::string(message.what()))
+	});
+
+	SourceUnit unit {R"(
+		nop // comment
+		nop
+	)", "file"};
+	auto tokens = Tokenizer::tokenize(&unit);
+
+	std::vector<std::string> expected = {
+		"\n", "nop", "\n", "nop", "\n"
+	};
+
+	checkTokens(tokens, expected);
 
 };
 
