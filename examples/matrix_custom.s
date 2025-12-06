@@ -1,0 +1,107 @@
+// This is a program, that will multiply a 5x5 matrix (provided at address 64 in data memory) by itself
+
+// 64 - address of the matrix
+// 128 - address of the result (for optimization the result will be saved into memory backwards)
+
+
+// Total number of elements to calculate in the result matrix
+set $1, 25
+// Current column
+set $2, 0
+set $0, 6
+stm $0, $2
+
+// Number of individual cells multiplications to go before going to the next column
+set $3, 25
+// Row iterator
+set $4, 64
+// Column iterator
+set $5, 64
+// Accumulator
+set $6, 0
+
+ptl:
+
+	// MULTIPLICATION HERE
+	// We will add the multiplication result to accumulator (R6) immediately anyway and we multiply by adding, so we just add straight to R6
+
+
+	// Loading 2 elements of the matrix from memory
+	ldm $0, $4
+	ldm $7, $5
+
+
+	// Multiplication loop:
+	mtpl:
+		// If the current lowest bit is 1, we add
+		set $2, 1
+		and $2, $7
+		cmp $, $2
+			ne.add $6, $0
+
+		// Shift left
+		add $0, $0
+		// Shift right
+		shr $7, 1
+	//If the number we bitshift is equal to 0 we just end
+	cmp $, $7
+	ne.jmp mtpl
+
+	// Adding 5 to the column iterator (moving down in the matrix)
+    set $0, 5
+	add $5, $0
+
+	// If we are out of the matrix (24 elements + address) it means we went through the whole column, so we need to reset column iterator and save the result
+	set $0, 89
+	cmp $0, $5
+	a.jmp skip_saving
+
+		// Decrementing the number of elements left to calculate (we will aso use this number as array index for the output matrix)
+		set $0, 1
+        cmp $1, $0
+        // Base address of the array for the result matrix
+		set $0, 128
+		stm $01, $6
+		// If number of elements left to calculate is 0, then we break the loop
+		z.jmp break
+
+
+		// Fetching current column number
+		set $5, 6
+		ldm $2, $5
+		// First element on the n-th column is also n-th element of the first row and the n-th element of the whole matrix, so we add it to the address of the whole matrix (we can use OR, since the address is a power of 2)
+		set $5, 64
+		mov $5, $25
+		// Resetting the accumulator
+		set $6, 0
+	skip_saving:
+
+	// We will be adding and subtracting 1 a few times, so we set it here
+	set $0, 1
+
+	// Adding 1 to the row iterator (moving right in the matrix)
+	add $4, $0
+
+	// We multiplied the whole matrix by the current column if this is 0, in such a case we need to move to the next column and reset back to the first row
+	cmp $3, $0
+	nz.jmp ptl
+
+		// Resetting number of multiplications to run before switching columns to 25
+		set $3, 25
+		// Fetching current column number
+        set $4, 6
+        ldm $2, $4
+		// Switching columns
+	 	add $2, $0
+	 	// First element on the n-th column is also n-th element of the first row and the n-th element of the whole matrix, so we add it to the address of the whole matrix (we can use OR, since the address is a power of 2)
+	 	set $5, 64
+	 	mov $5, $25
+	 	// Saving updated column number
+	 	stm $4, $2
+	 	// Starting with the first row, first element
+	 	set $4, 64
+
+jmp ptl
+
+break:
+
