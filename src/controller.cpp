@@ -164,6 +164,24 @@ void run(const std::vector<uint8_t>& bytes) {
 			printf("  addp, pr - Set peripheral at address\n");
 			printf("  remp, rp - Remove peripheral from address\n");
 			printf("  lspr, lp - List peripherals\n");
+			printf("	 setm, sm - Initialize data memory at given offset with an array of the given length (usage: sm <offset> <n - length> <data 0> <data 1> ... <data n-1>)\n");
+			continue;
+		}
+
+		if (command == "setm" || command == "sm") {
+			int offset;
+			int length;
+			std::cin >> offset;
+			std::cin >> length;
+			for(int i = 0; i<length; i++)
+			{
+				int data;
+				std::cin >> data;
+				state.ram[i+offset] = data;
+			}
+
+			printf("Initialized %d bytes of memory at 0x%x\n", length, offset);
+
 			continue;
 		}
 
