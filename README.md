@@ -16,3 +16,4 @@ The standard defines 8 registers available to the programmer with a powerful, un
 - ```src/``` - A software development kit (SDK): assembler, disassembler and an emulator with debugging functions. Written in C++.
 - ```entry/``` - Entry points for SDK (there are two - tests and user CLI) - separated from ```src``` so that it's easier to use the SDK as a C++ library.
 - ```CMakeLists.txt``` - Build system for the SDK (there are 3 CMake targets: ```microarch-test``` for tests, ```microarch``` for the CLI program and ```microarch-common``` for use as a library)
+- ```examples/``` - Example programs written in microarch assembly
