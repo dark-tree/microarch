@@ -1,6 +1,7 @@
 #include "controller.hpp"
 
 #include <assembler.hpp>
+#include <chrono>
 #include <cstring>
 #include <file.hpp>
 #include <reader/reader.hpp>
@@ -40,8 +41,7 @@ std::vector<uint8_t> loadBinaryInput(const std::string& input, bool use_hex) {
 	return decodeHexString(data);
 }
 
-void assemble(const std::string& input, const std::string& output, bool use_hex) {
-
+std::optional<std::vector<uint8_t>> assemble(const std::string& input) {
 	std::string source = file::read(input);
 
 	MessageSink::clear();
@@ -70,7 +70,7 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 
 	if (MessageSink::error()) {
 		printf("\nCompilation aborted due to errors; no output produced.\n");
-		return;
+		return std::nullopt;
 	}
 
 	Assembler assembler;
@@ -78,6 +78,16 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 
 	if (MessageSink::error()) {
 		printf("\nCompilation aborted due to errors; no output produced.\n");
+		return std::nullopt;
+	}
+
+	return bytes;
+}
+
+void assemble(const std::string& input, const std::string& output, bool use_hex) {
+	auto opt = assemble(input);
+
+	if (!opt.has_value()) {
 		return;
 	}
 
@@ -85,8 +95,8 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 		char const hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 		std::string result;
 
-		for (size_t i = 0, c = 0; i < bytes.size(); i ++) {
-			char const byte = bytes[i];
+		for (size_t i = 0, c = 0; i < opt->size(); i ++) {
+			char const byte = opt->at(i);
 
 			result += hex[(byte & 0xF0) >> 4];
 			result += hex[(byte & 0x0F) >> 0];
@@ -101,8 +111,7 @@ void assemble(const std::string& input, const std::string& output, bool use_hex)
 		return;
 	}
 
-	file::write(output, bytes);
-
+	file::write(output, *opt);
 }
 
 void disassemble(const std::string& input, bool use_hex) {
@@ -113,4 +122,238 @@ void disassemble(const std::string& input, bool use_hex) {
 
 	std::string back = state.disassemble();
 	printf("%s\n", back.c_str());
+}
+
+void run(const std::vector<uint8_t>& bytes) {
+	MicroReader reader;
+	CoreState state = reader.toProgram(bytes);
+
+	auto time_of = [] (const std::function<void()>& benchmark) -> long {
+		auto start = std::chrono::high_resolution_clock::now();
+
+		benchmark();
+
+		auto end = std::chrono::high_resolution_clock::now();
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+	};
+
+	auto time = [&] (const std::function<void()>& benchmark) {
+		printf("Done in %ldns\n", time_of(benchmark));
+	};
+
+	while (true) {
+
+		std::string command;
+		std::cin >> command;
+
+		if (command == "help" || command == "h" || command == "?") {
+			printf("Valid commands:\n");
+			printf("  help, h -  Show this help page\n");
+			printf("  run,  c  - Run program using interpreter\n");
+			printf("  jit,  j  - Run program using JIT\n");
+			printf("  step, s  - Single step forward\n");
+			printf("  regs, r  - Print registers\n");
+			printf("  list, l  - Print program\n");
+			printf("  quit, q  - Quit microarch emulator\n");
+			printf("  init, i  - Reset the simulation\n");
+			printf("  perf, p  - Benchmark the interpreter and JIT\n");
+			printf("  addb, br - Add interpreter breakpoint\n");
+			printf("  remb, rb - Remove interpreter breakpoint\n");
+			printf("  lsbr, lb - List interpreter breakpoints\n");
+			printf("  dump, m  - Print random access memory\n");
+			printf("  addp, pr - Set peripheral at address\n");
+			printf("  remp, rp - Remove peripheral from address\n");
+			printf("  lspr, lp - List peripherals\n");
+			continue;
+		}
+
+		if (command == "addp" || command == "pr") {
+			int pr;
+			std::cin >> pr;
+
+			if (pr < 0 || pr > 0xFFFF) {
+				printf("Invalid peripheral address!\n");
+				continue;
+			}
+
+			printf("Set peripheral at 0x%x\n", pr);
+			state.peripherals[pr] = Peripheral {
+				[pr] (uint8_t value) -> void { printf("Peripheral 0x%x: Write 0x%x\n", pr, value); },
+				[pr] -> uint8_t { printf("Peripheral 0x%x: Read ", pr); int v; std::cin >> v; printf("\n"); return v; },
+			};
+			continue;
+		}
+
+		if (command == "remp" || command == "rp") {
+			int pr;
+			std::cin >> pr;
+
+			if (pr < 0 || pr > 0xFFFF) {
+				printf("Invalid peripheral address!\n");
+				continue;
+			}
+
+			if (state.peripherals.erase(pr)) {
+				printf("Removed peripheral from 0x%x\n", pr);
+			} else {
+				printf("No peripheral set at 0x%x\n", pr);
+			}
+
+			continue;
+		}
+
+		if (command == "lspr" || command == "lp") {
+			if (state.peripherals.empty()) {
+				printf("No peripherals set, use 'pr X' to set one.\n");
+				continue;
+			}
+
+			printf("Peripherals:\n");
+
+			for (auto& [address, peripheral] : state.peripherals) {
+				printf("  0x%x\n", address);
+			}
+			continue;
+		}
+
+		if (command == "dump" || command == "m") {
+			for (int i = 0; i < 256; i += 16) {
+				printf("0x%02x: ", i);
+
+				for (int j = 0; j < 16; j ++) {
+					printf("%02x ", state.ram[i + j]);
+				}
+
+				printf("\n");
+			}
+
+			continue;
+		}
+
+		if (command == "run" || command == "c") {
+			time([&] {
+				state.run();
+			});
+
+			continue;
+		}
+
+		if (command == "jit" || command == "j") {
+			auto executable = state.jit();
+
+			time([&] {
+				executable();
+			});
+
+			continue;
+		}
+
+		if (command == "step" || command == "s") {
+			state.run(1);
+			continue;
+		}
+
+		if (command == "regs" || command == "r") {
+			printf("R0=%s  R4=%s\n", state.reg(0).c_str(), state.reg(4).c_str());
+			printf("R1=%s  R5=%s\n", state.reg(1).c_str(), state.reg(5).c_str());
+			printf("R2=%s  R6=%s\n", state.reg(2).c_str(), state.reg(6).c_str());
+			printf("R3=%s  R7=%s\n", state.reg(3).c_str(), state.reg(7).c_str());
+			printf("PC=0x%04x CF=%d ZF=%d\n", state.pc, state.cf, state.zf);
+			continue;
+		}
+
+		if (command == "perf" || command == "p") {
+			auto executable = state.jit();
+
+			int iterations = 1000;
+			size_t int_time = 0;
+			size_t jit_time = 0;
+
+			for (int i = 0; i < iterations; i ++) {
+				state.reset();
+
+				int_time += time_of([&] {
+					state.run();
+				});
+
+				state.reset();
+
+				jit_time += time_of([&] {
+					executable();
+				});
+			}
+
+			printf("Results after %d iterations:\n", iterations);
+			printf(" * Interpreter: %luns total (%fms)\n", int_time, int_time / 1000000.0);
+			printf(" * JIT: %luns total (%fms)\n", jit_time, jit_time / 1000000.0);
+			continue;
+		}
+
+		if (command == "addb" || command == "br") {
+			int br;
+			std::cin >> br;
+
+			if (br < 0 || br > 0xFFFF) {
+				printf("Invalid breakpoint address!\n");
+				continue;
+			}
+
+			printf("Set breakpoint at 0x%x\n", br);
+			state.breakpoints.insert(br);
+			continue;
+		}
+
+		if (command == "remb" || command == "rb") {
+			int br;
+			std::cin >> br;
+
+			if (br < 0 || br > 0xFFFF) {
+				printf("Invalid breakpoint address!\n");
+				continue;
+			}
+
+			if (state.breakpoints.erase(br)) {
+				printf("Removed breakpoint from 0x%x\n", br);
+			} else {
+				printf("No breakpoint set at 0x%x\n", br);
+			}
+
+			continue;
+		}
+
+		if (command == "lsbr" || command == "lb") {
+			if (state.breakpoints.empty()) {
+				printf("No breakpoints set, use 'br X' to set one.\n");
+				continue;
+			}
+
+			printf("Breakpoints:\n");
+
+			for (uint16_t br : state.breakpoints) {
+				printf("  0x%x\n", br);
+			}
+			continue;
+		}
+
+		if (command == "init" || command == "i") {
+			printf("Program reset back to the beginning.\n");
+			state.reset();
+			continue;
+		}
+
+		if (command == "list" || command == "l") {
+			std::string back = state.disassemble();
+			printf("%s\n", back.c_str());
+			continue;
+		}
+
+		if (command == "quit" || command == "q") {
+			break;
+		}
+
+		printf("Unknown command '%s', use help for a list of commands.\n", command.c_str());
+
+	}
+
+	printf("Goodbye!\n");
 }

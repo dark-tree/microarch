@@ -580,6 +580,7 @@ namespace argx {
 				if (m_auto_help) {
 					if (result.get("help")) {
 						printf("%s", get_help().c_str());
+						exit(0);
 					}
 				}
 

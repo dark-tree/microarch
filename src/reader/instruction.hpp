@@ -3,10 +3,9 @@
 #include <string>
 #include <writer.hpp>
 
-#include "labler.hpp"
+#include "labeler.hpp"
 #include "state.hpp"
 #include "asm/x86/writer.hpp"
-#include "out/buffer/segmented.hpp"
 
 using namespace asmio;
 using namespace asmio::x86;
@@ -26,20 +25,20 @@ class MicroInst {
 		/// Check if this instruction should execute
 		bool checkFlags(const CoreState& state) const;
 
-		// Generate instructions, that will compute value of the given registry set and place into the given register
-		static void jitComputeRegistrySet(BufferWriter& writer, Registry output, uint8_t registrySet);
+		/// Generate instructions, that will compute value of the given registry set and place into the given register
+		static void jitReadRegistrySet(BufferWriter& writer, Registry output, uint8_t registrySet);
 
-		// Place value into selected registry set
-		static void jitWriteToRegistrySet(BufferWriter& writer, Location input, uint8_t registrySet);
+		/// Place value into selected registry set
+		static void jitWriteRegistrySet(BufferWriter& writer, const Location& input, uint8_t registrySet);
 
-		// Run the provided x86 instruction on values of registry sets a and b, save the result to registry set a
-		void jitApplyInstructionOnRegistrySets(BufferWriter& writer, TwoArgumentJitInstruction instruction) const;
+		/// Run the provided x86 instruction on values of registry sets a and b, save the result to registry set a
+		void jitTwoArgInst(BufferWriter& writer, TwoArgumentJitInstruction instruction) const;
 
-		// Jumps to the returned label if the condition is not fulfilled
-		Label jitInsertConditionalJumpIfNeeded(BufferWriter& writer) const;
+		/// Jumps to the returned label if the condition is not fulfilled
+		Label jitWriteConditional(BufferWriter& writer) const;
 
-		// Surround instructions writen in the operation function with a conditional jump to make a conditional instruction
-		void jitConditionalExecute(BufferWriter& writer, std::function<void()>&& operation);
+		/// Surround instructions writen in the operation function with a conditional jump to make a conditional instruction
+		void jitConditional(BufferWriter& writer, const std::function<void()>& then);
 
 	public:
 
@@ -50,7 +49,7 @@ class MicroInst {
 		const uint8_t b;
 
 		MicroInst(uint16_t address, MicroWriter::Cond condition, uint8_t a, uint8_t b)
-				: address(address), condition(condition), a(a), b(b) {
+			: address(address), condition(condition), a(a), b(b) {
 		}
 
 		virtual ~MicroInst();
@@ -71,7 +70,7 @@ class MicroInst {
 		 * If this instruction references a label it should be appended to the given labeler
 		 * for them to appear in the output.
 		 */
-		virtual void label(Labler& labelr);
+		virtual void label(Labeler& labelr);
 
 		/**
 		 * Append this instruction to the JIT buffer as native instructions,
@@ -106,13 +105,13 @@ struct InstCmp : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitComputeRegistrySet(writer, DL, a);
-			jitComputeRegistrySet(writer, BL, b);
+		jitConditional(writer, [&writer, this] {
+			jitReadRegistrySet(writer, DL, a);
+			jitReadRegistrySet(writer, BL, b);
 			writer.put_sub(DL, BL);
 			writer.put_pushf();
 			writer.put_pop(SI);
-			jitWriteToRegistrySet(writer, DL, a);
+			jitWriteRegistrySet(writer, DL, a);
 		});
 	}
 };
@@ -133,8 +132,8 @@ struct InstAdd : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitApplyInstructionOnRegistrySets(writer, &BufferWriter::put_add);
+		jitConditional(writer, [&writer, this] {
+			jitTwoArgInst(writer, &BufferWriter::put_add);
 		});
 	}
 
@@ -156,9 +155,9 @@ struct InstMov : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitComputeRegistrySet(writer, BL, b);
-			jitWriteToRegistrySet(writer, BL, a);
+		jitConditional(writer, [&writer, this] {
+			jitReadRegistrySet(writer, BL, b);
+			jitWriteRegistrySet(writer, BL, a);
 		});
 	}
 
@@ -180,10 +179,10 @@ struct InstShr : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitComputeRegistrySet(writer, BL, a);
+		jitConditional(writer, [&writer, this] {
+			jitReadRegistrySet(writer, BL, a);
 			writer.put_shr(BL, b);
-			jitWriteToRegistrySet(writer, BL, a);
+			jitWriteRegistrySet(writer, BL, a);
 		});
 	}
 
@@ -205,8 +204,8 @@ struct InstXor : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitApplyInstructionOnRegistrySets(writer, &BufferWriter::put_xor);
+		jitConditional(writer, [&writer, this] {
+			jitTwoArgInst(writer, &BufferWriter::put_xor);
 		});
 	}
 };
@@ -227,8 +226,8 @@ struct InstAnd : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitApplyInstructionOnRegistrySets(writer, &BufferWriter::put_and);
+		jitConditional(writer, [&writer, this] {
+			jitTwoArgInst(writer, &BufferWriter::put_and);
 		});
 	}
 };
@@ -249,12 +248,12 @@ struct InstNad : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitComputeRegistrySet(writer, DL, a);
-			jitComputeRegistrySet(writer, BL, b);
+		jitConditional(writer, [&writer, this] {
+			jitReadRegistrySet(writer, DL, a);
+			jitReadRegistrySet(writer, BL, b);
 			writer.put_and(DL, BL);
 			writer.put_neg(DL);
-			jitWriteToRegistrySet(writer, DL, a);
+			jitWriteRegistrySet(writer, DL, a);
 		});
 	}
 };
@@ -275,9 +274,9 @@ struct InstCtr : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
+		jitConditional(writer, [&writer, this] {
 
-			jitComputeRegistrySet(writer, DL, a);
+			jitReadRegistrySet(writer, DL, a);
 			writer.put_and(DL, b);
 			writer.put_and(CL, ~b);
 			writer.put_or(CL, DL);
@@ -309,8 +308,8 @@ struct InstCid : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitWriteToRegistrySet(writer, 0, cidRegistrySet);
+		jitConditional(writer, [&writer] {
+			jitWriteRegistrySet(writer, 0, cidRegistrySet);
 		});
 	}
 
@@ -327,7 +326,7 @@ struct InstJpi : MicroInst {
 		state.pc = a << 8 | b;
 	}
 
-	void label(Labler& labelr) override {
+	void label(Labeler& labelr) override {
 		labelr.add(a << 8 | b);
 	}
 
@@ -336,7 +335,7 @@ struct InstJpi : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
+		jitConditional(writer, [&writer, this] {
 			uint16_t offset = (a << 8) | b;
 			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS) + 8 * offset);
 			writer.put_jmp(RAX);
@@ -361,9 +360,9 @@ struct InstJpr : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitComputeRegistrySet(writer, DL, a);
-			jitComputeRegistrySet(writer, BL, b);
+		jitConditional(writer, [&writer, this] {
+			jitReadRegistrySet(writer, DL, a);
+			jitReadRegistrySet(writer, BL, b);
 			writer.put_mov(BH, DL);
 			writer.put_movzx(RBX, BX);
 			writer.put_lea(RAX, Location(CoreState::INSTRUCTION_OFFSETS));
@@ -385,7 +384,7 @@ struct InstStm : MicroInst {
 		if (!state.memorySegmented() || state.ram[CoreState::SEGMENT_REGISTER_ADDRESS] == 0) {
 			auto iterator = state.peripherals.find(address);
 			if (iterator != state.peripherals.end()) {
-				iterator->second.writeCallback(state.read(b));
+				iterator->second.write(state.read(b));
 				return;
 			}
 		}
@@ -403,22 +402,23 @@ struct InstStm : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this, &core]() {
+		jitConditional(writer, [&writer, this, &core] {
+
 			// If memory structure is more complicated, than a simple array of bytes (for example we have peripheral devices
 			// or a segment register, that are mapped onto specific memory addresses) we use a special array containing jump
 			// instructions, which jump to appropriate functions (for example function changing memory, reading from a
 			// peripheral or reading from segment register). We do it all to avoid redundant branch points.
 			if (core.peripherals.size() > 0 || core.memorySegmented()) {
-				jitComputeRegistrySet(writer, DL, a);
-				jitComputeRegistrySet(writer, BL, b);
+				jitReadRegistrySet(writer, DL, a);
+				jitReadRegistrySet(writer, BL, b);
 				writer.put_movzx(RDI, DL);
 				writer.put_movzx(RSI, BL);
 				writer.put_lea(RAX, Location(CoreState::MEMORY_WRITE_MAPPING));
 				writer.put_lea(RAX, RAX + RDI * 8);
 				writer.put_call(RAX);
 			} else {
-				jitComputeRegistrySet(writer, DL, a);
-				jitComputeRegistrySet(writer, BL, b);
+				jitReadRegistrySet(writer, DL, a);
+				jitReadRegistrySet(writer, BL, b);
 				writer.put_movzx(RDX, DL);
 				writer.put_lea(RAX, CoreState::DATA_MEMORY);
 				writer.put_mov(ref(RAX + RDX), BL);
@@ -436,13 +436,15 @@ struct InstLdm : MicroInst {
 	void apply(CoreState& state) override {
 		if (!checkFlags(state)) return;
 		uint8_t address = state.read(b);
+
 		if (!state.memorySegmented() || state.ram[CoreState::SEGMENT_REGISTER_ADDRESS] == 0) {
 			auto iterator = state.peripherals.find(address);
 			if (iterator != state.peripherals.end()) {
-				state.write(a, iterator->second.readCallback());
+				state.write(a, iterator->second.read());
 				return;
 			}
 		}
+
 		if (state.memorySegmented() && CoreState::SEGMENT_REGISTER_ADDRESS != address) {
 			uint16_t final_address = (state.ram[CoreState::SEGMENT_REGISTER_ADDRESS] << 8) | address;
 			state.write(a, state.ram[final_address]);
@@ -457,24 +459,25 @@ struct InstLdm : MicroInst {
 
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this, &core]() {
+		jitConditional(writer, [&writer, this, &core] {
+
 			// If memory structure is more complicated, than a simple array of bytes (for example we have peripheral devices
 			// or a segment register, that are mapped onto specific memory addresses) we use a special array containing jump
 			// instructions, which jump to appropriate functions (for example function changing memory, reading from a
 			// peripheral or reading from segment register). We do it all to avoid redundant branch points.
 			if (core.peripherals.size() > 0 || core.memorySegmented()) {
-				jitComputeRegistrySet(writer, BL, b);
+				jitReadRegistrySet(writer, BL, b);
 				writer.put_movzx(RDI, BL);
 				writer.put_lea(RAX, Location(CoreState::MEMORY_READ_MAPPING));
 				writer.put_lea(RAX, RAX + RDI * 8);
 				writer.put_call(RAX);
-				jitWriteToRegistrySet(writer, AL, a);
+				jitWriteRegistrySet(writer, AL, a);
 			} else {
-				jitComputeRegistrySet(writer, BL, b);
+				jitReadRegistrySet(writer, BL, b);
 				writer.put_movzx(RBX, BL);
 				writer.put_lea(RAX, CoreState::DATA_MEMORY);
 				writer.put_mov(DL, ref(RAX + RBX));
-				jitWriteToRegistrySet(writer, DL, a);
+				jitWriteRegistrySet(writer, DL, a);
 			}
 		});
 	}
@@ -496,8 +499,8 @@ struct InstSet : MicroInst {
 	}
 
 	void jit(BufferWriter& writer, CoreState& core) override {
-		jitConditionalExecute(writer, [&writer, this]() {
-			jitWriteToRegistrySet(writer, b, a);
+		jitConditional(writer, [&writer, this] {
+			jitWriteRegistrySet(writer, b, a);
 		});
 	}
 };

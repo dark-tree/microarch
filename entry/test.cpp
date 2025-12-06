@@ -57,7 +57,7 @@ TEST(tokenize_mixed) {
 		"nop", ";", "nop", "\n", "\n"
 	};
 
-	for (unsigned int i = 0; i < tokens.size(); i++) {
+	for (size_t i = 0; i < tokens.size(); i++) {
 		const Token& token = tokens[i];
 
 		if (token.lexeme() != expected[i]) {
@@ -318,15 +318,15 @@ TEST(reader_disassemble) {
 
 	std::string back = state.disassemble();
 
-	CHECK(back, R"(	set $1, 42
-	set $4, 1
-	set $5, 0
+	CHECK(back, R"(0000	set $1, 42
+0001	set $4, 1
+0002	set $5, 0
 
 l_3:
-	nop
-	mov $1, $
-	jmp l_3
-	mov $7, $5
+0003	nop
+0004	mov $1, $
+0005	jmp l_3
+0006	mov $7, $5
 )");
 
 };
@@ -461,11 +461,14 @@ TEST(jit_extended_memory) {
 	)", "file"};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 
+	state.data_memory_size = 200 * CoreState::DATA_MEMORY_SEGMENT_SIZE;
 	ExecutableCore core = state.jit();
 
 	core();
@@ -494,15 +497,18 @@ TEST(jit_peripheal) {
 
 	uint8_t result;
 
-	Peripheral peripheral([&result](uint8_t arg) noexcept{result = arg;}, []() noexcept{return 204;});
-
+	Peripheral peripheral {
+		[&result](uint8_t arg) noexcept{ result = arg; },
+		[] () noexcept{ return 204; }
+	};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
-
 	state.peripherals.insert({8, peripheral});
 
 	ExecutableCore core = state.jit();
@@ -526,8 +532,10 @@ TEST(jit_memory) {
 	)", "file"};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 
@@ -563,20 +571,19 @@ TEST(jit_fibonacci) {
 	)", "file"};
 
 	auto tokens = Tokenizer::tokenize(&unit);
+
 	Assembler assembler;
 	auto bytes = assembler.assemble(tokens);
+
 	MicroReader reader;
 	CoreState state = reader.toProgram(bytes);
 
 	ExecutableCore core = state.jit();
 
-	uint8_t fibonacci_sequence [] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233};
-
-	for (int i=0;i<14;i++) {
+	for (uint8_t next : {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233}) {
 		core();
-		CHECK(state.regs[2], fibonacci_sequence[i]);
+		CHECK(state.regs[2], next);
 	}
-
 
 };
 

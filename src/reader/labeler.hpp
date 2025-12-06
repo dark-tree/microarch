@@ -1,10 +1,9 @@
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 #include <vector>
 
-class Labler {
+class Labeler {
 
 	private:
 
@@ -12,8 +11,10 @@ class Labler {
 
 	public:
 
+		/// Check if there is any label targeting this address
 		bool has(uint16_t target) const;
 
+		/// Add label target
 		void add(uint16_t target);
 
 };
