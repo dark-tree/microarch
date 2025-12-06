@@ -85,7 +85,7 @@ struct CoreState {
 
 	std::unordered_set<uint16_t> breakpoints;
 
-	unsigned int data_memory_size = 2 * DATA_MEMORY_SEGMENT_SIZE;
+	unsigned int data_memory_size = 1 * DATA_MEMORY_SEGMENT_SIZE;
 	std::unordered_map<uint16_t, Peripheral> peripherals;
 
 	union ControlByte {
