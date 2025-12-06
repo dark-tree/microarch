@@ -35,6 +35,7 @@ static void jitSaveState(ExecutableCore* executableCore) {
 }
 
 static void jitLoadState(ExecutableCore* executableCore) {
+
 	ExecutableBuffer& code = executableCore->code;
 	CoreState* core = executableCore->core;
 
@@ -188,8 +189,16 @@ ExecutableCore CoreState::jit() {
 	writer.section(BufferSegment::R | BufferSegment::X);
 	writer.label(ExecutableCore::CODE_START);
 
+	// Saving registers according to x86-64 System-V calling convention
+	writer.put_push(RBX);
+	writer.put_push(RBP);
+	writer.put_push(R12);
+	writer.put_push(R13);
+	writer.put_push(R14);
+	writer.put_push(R15);
+
 	// Saving pointer for accessing core state and labels
-	writer.put_mov(RAX, ref(RAX));
+	writer.put_mov(RAX, ref(RDI));
 	writer.put_mov(ref(EXECUTABLE_CORE_POINTER), RAX);
 
 	// Initializing data memory, flags and registers with data from CoreState
@@ -244,6 +253,14 @@ ExecutableCore CoreState::jit() {
 	writer.put_mov(RAX, (uint64_t) (&jitSaveState));
 	writer.put_mov(RDI, ref(EXECUTABLE_CORE_POINTER));
 	writer.put_call(RAX);
+
+	// Restoring registers according to x86-64 System-V calling convention
+	writer.put_pop(R15);
+	writer.put_pop(R14);
+	writer.put_pop(R13);
+	writer.put_pop(R12);
+	writer.put_pop(RBP);
+	writer.put_pop(RBX);
 
 	// RET instruction demanded by ASMIOV library spec to return from JIT segment.
 	writer.put_ret();
