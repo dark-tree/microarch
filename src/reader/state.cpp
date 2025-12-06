@@ -292,34 +292,40 @@ ExecutableCore CoreState::jit() {
 			writer.put_pop(RSI);
 		};
 
-		const auto jump_if_segment_non_zero = [&writer] (const Location& target) {
-			writer.put_mov(RAX, ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS));
-			writer.put_add(RAX, 0);
-			writer.put_jnz(target);
+		const auto jump_if_segment_non_zero = [this, &writer] (const Location& target) {
+			if(memorySegmented())
+			{
+				writer.put_mov(AL, ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS));
+				writer.put_movzx(RAX, AL);
+				writer.put_add(RAX, 0);
+				writer.put_jnz(target);
+			}
 		};
 
 		// Function reads from a memory address specified by RDI, into RAX
 		writer.label(MEMORY_READ_FUNCTION);
 		writer.put_lea(RAX, Location(DATA_MEMORY));
 		apply_segment_register();
-		writer.put_mov(RAX, ref(RAX + RDI));
+		writer.put_mov(AL, ref(RAX + RDI));
 		writer.put_ret();
 
 		// Function stores RSI at memory address specified by RDI
 		writer.label(MEMORY_WRITE_FUNCTION);
 		writer.put_lea(RAX, Location(DATA_MEMORY));
 		apply_segment_register();
-		writer.put_mov(ref(RAX + RDI), RSI);
+		writer.put_mov(RBX, RSI);
+		writer.put_mov(ref(RAX + RDI), BL);
 		writer.put_ret();
 
 		// Functions for reading and writing from segment register, which is mapped at a fixed memory address in
 		// every segment
 		writer.label(SEGMENT_REGISTER_WRITE_FUNCTION);
-		writer.put_mov(ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS), RSI);
+		writer.put_mov(RAX, RSI);
+		writer.put_mov(ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS), AL);
 		writer.put_ret();
 
 		writer.label(SEGMENT_REGISTER_READ_FUNCTION);
-		writer.put_mov(RAX, ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS));
+		writer.put_mov(AL, ref(Location(DATA_MEMORY) + SEGMENT_REGISTER_ADDRESS));
 		writer.put_ret();
 
 		// Functions below push registers to stack (because we are calling a C++ function) and call the function dispatching
@@ -352,7 +358,7 @@ ExecutableCore CoreState::jit() {
 		writer.label(MEMORY_READ_MAPPING);
 		for (size_t i = 0; i < DATA_MEMORY_SEGMENT_SIZE; i ++) {
 			jitPadCode(writer, buffer, 8, [&] {
-				if (i == SEGMENT_REGISTER_ADDRESS) {
+				if (memorySegmented() && i == SEGMENT_REGISTER_ADDRESS) {
 					writer.put_jmp(SEGMENT_REGISTER_READ_FUNCTION);
 				} else if (!peripherals.contains(i)) {
 					writer.put_jmp(MEMORY_READ_FUNCTION);
@@ -365,7 +371,7 @@ ExecutableCore CoreState::jit() {
 		writer.label(MEMORY_WRITE_MAPPING);
 		for (size_t i = 0; i < DATA_MEMORY_SEGMENT_SIZE; i ++) {
 			jitPadCode(writer, buffer, 8, [&] {
-				if (i == SEGMENT_REGISTER_ADDRESS) {
+				if (memorySegmented() && i == SEGMENT_REGISTER_ADDRESS) {
 					writer.put_jmp(SEGMENT_REGISTER_WRITE_FUNCTION);
 				} else if (!peripherals.contains(i)) {
 					writer.put_jmp(MEMORY_WRITE_FUNCTION);
