@@ -38,7 +38,9 @@ module mmu
 
   wire io_register_operation_completed = (io_registers_read | io_registers_write);
 
-  wire operation_completed = ((memory_read_signal | memory_write_signal) & memory_ready) | (io_registers_ready & io_register_operation_completed);
+  wire operation_completed = ((memory_read_signal | memory_write_signal) & memory_ready) | (io_registers_ready & io_register_operation_completed) | completed;
+
+  wire actually_execute = execute & (!operation_ongoing);
 
   always @(posedge clk)
   begin
@@ -61,7 +63,7 @@ module mmu
       end
     end
 
-    if(execute == 1'b1) begin
+    if(actually_execute == 1'b1) begin
       memory_address <= address;
       io_registers_address <= address[3:0] - 2;
       if(write == 1'b1) begin
@@ -93,7 +95,7 @@ module mmu
       end
     end
 
-    if((execute | operation_ongoing) == 1'b0) begin
+    if((actually_execute | operation_ongoing) == 1'b0) begin
       completed <= 1'b0;
     end
 
@@ -106,6 +108,6 @@ module mmu
 
 
 
-  assign pre_completed = (operation_ongoing == 1'b1) ? operation_completed : 1'b0;
+  assign pre_completed = (operation_ongoing == 1'b1) ? operation_completed : ((actually_execute & (|address[7:1] == 1'b0)) | completed);
 
 endmodule
