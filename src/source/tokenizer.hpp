@@ -22,7 +22,7 @@ class Tokenizer {
 			{'\'', '\''}
 		};
 
-		static void scanInlineComment(Lexer& lexer);
+		static void scanInlineComment(Lexer& lexer, Token::Stream& sink);
 		static void scanMultilineComment(Lexer& lexer);
 		static void scanIdentifierOrLabel(Lexer& lexer, Token::Stream& sink);
 		static void scanCharEscape(Lexer& lexer);

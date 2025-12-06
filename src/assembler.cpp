@@ -36,9 +36,9 @@ uint8_t Assembler::parseImmediate(Parser& parser) {
 	auto lexeme = parser.expect(Token::INTEGER).lexeme();
 
 	if (lexeme.length() >= 2) {
-		if (lexeme[1] == 'x') return StringUtil::parseIntWithBase(lexeme, 16);
-		if (lexeme[1] == 'o') return StringUtil::parseIntWithBase(lexeme, 8);
-		if (lexeme[1] == 'b') return StringUtil::parseIntWithBase(lexeme, 2);
+		if (lexeme[1] == 'x') return StringUtil::parseIntWithBase(lexeme.substr(2), 16);
+		if (lexeme[1] == 'o') return StringUtil::parseIntWithBase(lexeme.substr(2), 8);
+		if (lexeme[1] == 'b') return StringUtil::parseIntWithBase(lexeme.substr(2), 2);
 	}
 
 	return StringUtil::parseIntWithBase(lexeme, 10);

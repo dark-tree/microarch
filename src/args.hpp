@@ -94,7 +94,7 @@ namespace argx {
 
 		public:
 
-			argument(const std::string_view& category)
+			argument(const std::string_view& category) noexcept
 				: m_category(category) {
 			}
 
@@ -178,7 +178,7 @@ namespace argx {
 
 		public:
 
-			option(std::shared_ptr<argument> definition)
+			option(std::shared_ptr<argument> definition) noexcept
 				: m_definition(definition) {
 			}
 

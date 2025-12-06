@@ -6,10 +6,13 @@
  * class Tokenizer
  */
 
-void Tokenizer::scanInlineComment(Lexer& lexer) {
+void Tokenizer::scanInlineComment(Lexer& lexer, Token::Stream& sink) {
 	while (lexer) {
 
+		lexer.beginToken();
+
 		if (lexer.match('\n')) {
+			sink.push_back(lexer.endToken(Token::BREAK));
 			return;
 		}
 
@@ -240,7 +243,7 @@ std::vector<Token> Tokenizer::tokenize(const SourceUnit* unit) {
 		}
 
 		if (lexer.accept("//")) {
-			scanInlineComment(lexer);
+			scanInlineComment(lexer, sink); // can emit BREAK Token
 			continue;
 		}
 
@@ -277,6 +280,10 @@ std::vector<Token> Tokenizer::tokenize(const SourceUnit* unit) {
 		lexer.unreachable();
 
 	}
+
+	// end of file break
+	lexer.beginToken();
+	sink.push_back(lexer.endToken(Token::BREAK));
 
 	return sink;
 }
