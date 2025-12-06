@@ -409,6 +409,7 @@ struct InstStm : MicroInst {
 			// instructions, which jump to appropriate functions (for example function changing memory, reading from a
 			// peripheral or reading from segment register). We do it all to avoid redundant branch points.
 			if (core.peripherals.size() > 0 || core.memorySegmented()) {
+				writer.put_push(SI);
 				jitReadRegistrySet(writer, DL, a);
 				jitReadRegistrySet(writer, BL, b);
 				writer.put_movzx(RDI, DL);
@@ -416,6 +417,7 @@ struct InstStm : MicroInst {
 				writer.put_lea(RAX, Location(CoreState::MEMORY_WRITE_MAPPING));
 				writer.put_lea(RAX, RAX + RDI * 8);
 				writer.put_call(RAX);
+				writer.put_pop(SI);
 			} else {
 				jitReadRegistrySet(writer, DL, a);
 				jitReadRegistrySet(writer, BL, b);

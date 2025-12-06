@@ -1,5 +1,6 @@
 
 synth:
+	mkdir -p build
 	yosys microarch_synth.ys
 
 implement: synth

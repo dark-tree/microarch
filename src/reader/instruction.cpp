@@ -44,6 +44,13 @@ void MicroInst::label(Labeler& labeler) {
 }
 
 void MicroInst::jitReadRegistrySet(BufferWriter& writer, Registry output, uint8_t set) {
+
+	if(set == 0)
+	{
+		writer.put_mov(output, 0);
+		return;
+	}
+
 	bool firstMoved = false;
 
 	for (auto reg : CoreState::REGISTRY_MAPPING) {

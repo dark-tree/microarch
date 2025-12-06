@@ -35,12 +35,14 @@ run: build_main
 	gtkwave tracedump/traces.fst
 
 sim:
+	mkdir -p build
 	yosys post_synthesis_sim.ys
 	gtkwave tracedump/post_synthesis.fst
 
 unit_tests:
 	@echo "-- Running the microarch BaseCore SystemC unit tests --"
 	@echo "Running the simulation..."
+	mkdir -p build
 	./unit_tests.sh $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) $(PROGRAM_MEMORY_SELECTED)
 
 build_main: verilate_main
@@ -52,4 +54,5 @@ verilate_main:
 	@echo "-- Verilating microarch BaseCore design simulation --"
 	@echo "Generating object files..."
 	@echo "Generating Makefile..."
+	mkdir -p build
 	verilator -sc -exe --trace-fst -GPROGRAM_HEX_FILE="\"$(TARGET)\"" $(VERILOG_DESIGN_FILES) $(DATA_MEMORY_SELECTED) $(PROGRAM_MEMORY_SELECTED) --top microcontroller testbench/sc_main.cpp
